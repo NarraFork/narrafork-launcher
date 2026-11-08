@@ -3,26 +3,26 @@
 #
 # The lines below are called `modelines`. See `:help modeline`
 
-name: "foundation"
+name: "narrafork-launcher"
 arch: ${GOARCH}
 platform: "linux"
-version: "2.0.0"
+version: "0.1.0"
 section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
-description: "A foundation application"
-vendor: "My Company"
+description: "NarraFork launcher and downloader"
+vendor: "NarraFork"
 homepage: "https://wails.io"
 license: "MIT"
 release: "1"
 
 contents:
-  - src: "./bin/foundation"
-    dst: "/usr/local/bin/foundation"
+  - src: "./bin/narrafork-launcher"
+    dst: "/usr/local/bin/narrafork-launcher"
   - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/foundation.png"
-  - src: "./build/linux/foundation.desktop"
-    dst: "/usr/share/applications/foundation.desktop"
+    dst: "/usr/share/icons/hicolor/128x128/apps/narrafork-launcher.png"
+  - src: "./build/linux/narrafork-launcher.desktop"
+    dst: "/usr/share/applications/narrafork-launcher.desktop"
 
 # Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
 depends:

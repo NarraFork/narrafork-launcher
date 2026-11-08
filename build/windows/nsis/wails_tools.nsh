@@ -5,19 +5,19 @@
 !include "FileFunc.nsh"
 
 !ifndef INFO_PROJECTNAME
-    !define INFO_PROJECTNAME "foundation"
+    !define INFO_PROJECTNAME "narrafork-launcher"
 !endif
 !ifndef INFO_COMPANYNAME
-    !define INFO_COMPANYNAME "My Company"
+    !define INFO_COMPANYNAME "NarraFork"
 !endif
 !ifndef INFO_PRODUCTNAME
-    !define INFO_PRODUCTNAME "My Product"
+    !define INFO_PRODUCTNAME "NarraFork Launcher"
 !endif
 !ifndef INFO_PRODUCTVERSION
-    !define INFO_PRODUCTVERSION "2.0.0"
+    !define INFO_PRODUCTVERSION "0.1.0"
 !endif
 !ifndef INFO_COPYRIGHT
-    !define INFO_COPYRIGHT "© 2026, My Company"
+    !define INFO_COPYRIGHT "© 2026, NarraFork"
 !endif
 !ifndef PRODUCT_EXECUTABLE
     !define PRODUCT_EXECUTABLE "${INFO_PROJECTNAME}.exe"

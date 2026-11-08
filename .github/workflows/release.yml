@@ -1,0 +1,131 @@
+name: Release
+
+# 推送 v* 标签时构建全平台并发布 GitHub Release；也可手动触发（只构建，产物留在 Actions）。
+# 版本号以 build/config.yml 的 info.version 为准，标签必须与之一致。
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  APP_NAME: narrafork-launcher
+  WAILS_VERSION: v3.1.0
+  GO_VERSION: '1.26.0'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows 不用 CGO，arm64 直接交叉编译；macOS 的 cgo 按 GOARCH 自动加 -arch，两种架构都在 Apple Silicon 上构建；
+        # Linux 依赖 GTK/WebKitGTK，需要对应架构的原生 runner。
+        include:
+          - { os: windows-latest, goos: windows, goarch: amd64, label: windows-x64 }
+          - { os: windows-latest, goos: windows, goarch: arm64, label: windows-arm64 }
+          - { os: macos-latest, goos: darwin, goarch: arm64, label: macos-arm64 }
+          - { os: macos-latest, goos: darwin, goarch: amd64, label: macos-x64 }
+          - { os: ubuntu-24.04, goos: linux, goarch: amd64, label: linux-x64 }
+          - { os: ubuntu-24.04-arm, goos: linux, goarch: arm64, label: linux-arm64 }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag matches build/config.yml
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION=$(sed -n 's/^  version: "\(.*\)".*/\1/p' build/config.yml | head -1)
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match build/config.yml version $VERSION"
+            exit 1
+          fi
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Linux dependencies (GTK4 + WebKitGTK 6.0)
+        if: matrix.goos == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
+
+      - name: Install wails3
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: go test ./internal/...
+
+      - name: Build
+        run: wails3 task ${{ matrix.goos }}:build ARCH=${{ matrix.goarch }}
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          LABEL=${{ matrix.label }}
+          case "${{ matrix.goos }}" in
+            windows)
+              cp "bin/$APP_NAME.exe" "dist/$APP_NAME-$LABEL.exe"
+              ;;
+            darwin)
+              wails3 task darwin:create:app:bundle
+              ditto -c -k --sequesterRsrc --keepParent "bin/$APP_NAME.app" "dist/$APP_NAME-$LABEL.app.zip"
+              ;;
+            linux)
+              cp "bin/$APP_NAME" "dist/$APP_NAME-$LABEL"
+              chmod +x "dist/$APP_NAME-$LABEL"
+              tar -C dist -czf "dist/$APP_NAME-$LABEL.tar.gz" "$APP_NAME-$LABEL"
+              rm "dist/$APP_NAME-$LABEL"
+              ;;
+          esac
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-${{ matrix.label }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: artifacts
+        run: sha256sum * > SHA256SUMS && cat SHA256SUMS
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: NarraFork Launcher ${{ github.ref_name }}
+          generate_release_notes: true
+          files: artifacts/*

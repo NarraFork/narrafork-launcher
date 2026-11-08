@@ -3,7 +3,7 @@
 <plist version="1.0">
 	<dict>
 		<key>CFBundleExecutable</key>
-		<string>foundation</string>
+		<string>narrafork-launcher</string>
 		<key>CFBundleGetInfoString</key>
 		<string>This is a comment</string>
 		<key>CFBundleIconFile</key>
@@ -11,15 +11,15 @@
 		<key>CFBundleIconName</key>
 		<string>appicon</string>
 		<key>CFBundleIdentifier</key>
-		<string>com.example.foundation</string>
+		<string>com.narrafork.launcher</string>
 		<key>CFBundleName</key>
-		<string>My Product</string>
+		<string>NarraFork Launcher</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
-		<string>2.0.0</string>
+		<string>0.1.0</string>
 		<key>CFBundleVersion</key>
-		<string>2.0.0</string>
+		<string>0.1.0</string>
 		<key>LSMinimumSystemVersion</key>
 		<string>12.0.0</string>
 		<key>NSAppTransportSecurity</key>
@@ -30,6 +30,6 @@
 		<key>NSHighResolutionCapable</key>
 		<string>true</string>
 		<key>NSHumanReadableCopyright</key>
-		<string>© 2026, My Company</string>
+		<string>© 2026, NarraFork</string>
 	</dict>
 </plist>

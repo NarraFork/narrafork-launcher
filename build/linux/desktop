@@ -1,13 +1,13 @@
 [Desktop Entry]
 Version=1.0
-Name=My Product
-Comment=A foundation application
+Name=NarraFork Launcher
+Comment=NarraFork launcher and downloader
 # The Exec line includes %u to pass the URL to the application
-Exec=/usr/local/bin/foundation %u
+Exec=/usr/local/bin/narrafork-launcher %u
 Terminal=false
 Type=Application
-Icon=foundation
+Icon=narrafork-launcher
 Categories=Utility;
-StartupWMClass=foundation
+StartupWMClass=narrafork-launcher
 
  

@@ -3,7 +3,7 @@
 // 后端字段：themeChoice / customTheme(JSON 字符串) / localeChoice。
 // customTheme 在前端 stringify / parse；其余按字符串透传。
 import { Events } from '@wailsio/runtime';
-import { Service as Binding } from '@bindings/foundation/internal/services/appsettings';
+import { Service as Binding } from '@bindings/narrafork-launcher/internal/services/appsettings';
 
 export type AppSettingsField = 'themeChoice' | 'customTheme' | 'localeChoice';
 

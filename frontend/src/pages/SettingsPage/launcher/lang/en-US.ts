@@ -1,0 +1,56 @@
+import type { Messages } from '@/i18n';
+
+export const launcherSettingsEnUS: Messages = {
+  settings: {
+    launcher: {
+      server: {
+        title: 'NarraFork server',
+        hint: "Leave port and host empty to keep NarraFork's own settings (~/.narrafork/settings.json). Changes apply after a restart.",
+        port: 'Port',
+        portPlaceholder: "Use NarraFork's setting",
+        host: 'Host',
+        hostPlaceholder: "Use NarraFork's setting",
+        binary: 'Custom executable',
+        binaryHint: 'When set, this file is started instead of the downloaded version.',
+        binaryPlaceholder: 'Use the downloaded version',
+        binaryBrowse: 'Choose executable',
+        binaryClear: 'Use the downloaded version',
+        binaryFilter: 'Executable',
+      },
+      launch: {
+        title: 'Startup',
+        autoStart: 'Start NarraFork when the launcher opens',
+        autoStartHint: 'Downloads the latest version on the channel first if none is installed.',
+        openOnReady: 'Open NarraFork once the server is ready',
+        mode: 'Open in',
+        modeInline: 'Built-in window',
+        modeExternal: 'System browser',
+        closeAction: 'When closing the window',
+        closeMinimize: 'Minimize to tray',
+        closeQuit: 'Quit the launcher (stops NarraFork)',
+      },
+      updates: {
+        title: 'Updates',
+        autoUpdate: 'Update NarraFork automatically',
+        autoUpdateHint: 'Checks for and downloads a newer version on the channel before starting.',
+        channel: 'Update channel',
+        channelHint: 'Beta includes pre-releases on GitHub.',
+        stable: 'Stable',
+        beta: 'Beta',
+      },
+      data: {
+        title: 'Built-in browser data',
+        hint: 'Only affects the launcher window, not your system browser or NarraFork server data.',
+        clear: 'Clear site data',
+        clearHint: "Clears NarraFork's cache, service workers, local storage and cookies; you will be signed out. The server must be running.",
+        clearDone: 'Cleared. Open NarraFork again.',
+        reset: 'Reset built-in browser',
+        resetHint: 'Deletes the whole built-in browser data folder (permissions and all cookies) the next time the launcher starts.',
+        resetConfirm: 'All built-in browser data will be deleted the next time the launcher starts. Continue?',
+        resetOk: 'Reset',
+        resetScheduled: 'Scheduled. It takes effect after you restart the launcher.',
+      },
+      saved: 'Saved',
+    },
+  },
+};

@@ -15,14 +15,14 @@ import (
 
 // AppDirName 是写到用户数据目录下的子文件夹名称。
 // 改成业务名时，连同 Wails 的 Name 一起改。
-const AppDirName = "Foundation"
+const AppDirName = "NarraForkLauncher"
 
 // DataDirEnv 指定后，数据根目录直接使用该路径（不再拼 AppDirName）。
 // cryptox / logx 读取同名环境变量，三者保持同一根目录。
-const DataDirEnv = "FOUNDATION_DATA_DIR"
+const DataDirEnv = "NARRAFORK_LAUNCHER_DATA_DIR"
 
 // DBFileName 是 SQLite 主文件名（WAL/SHM 由 SQLite 自动管理为 .db-wal / .db-shm）。
-const DBFileName = "foundation.db"
+const DBFileName = "launcher.db"
 
 // ConfigFileName 路径配置（独立于数据库本身，因此不能存到 db 里——鸡生蛋）。
 const ConfigFileName = "storage.json"
@@ -69,6 +69,11 @@ func userDataDir() (string, error) {
 		}
 		return filepath.Join(home, ".local", "share", AppDirName), nil
 	}
+}
+
+// DataDir 返回应用数据根目录（不创建）。业务 service 在其下放自己的子目录（如 launcher 的 bin/）。
+func DataDir() (string, error) {
+	return userDataDir()
 }
 
 // DefaultDBPath 返回平台默认数据库文件完整路径。

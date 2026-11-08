@@ -10,6 +10,10 @@ export const settingsPageZhCN: Messages = {
     eyebrow: '设置',
     title: '偏好设置',
     list: {
+      launcher: {
+        label: '启动器',
+        description: 'NarraFork 服务、打开方式、更新与浏览器数据',
+      },
       personalization: {
         label: '个性化',
         description: '主题、显示偏好与自定义配色',

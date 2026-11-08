@@ -24,15 +24,15 @@
 
 | 交互方式 | 当前用法 | 涉及文件 |
 |----------|----------|----------|
-| 方法调用 | `GreetService.greet(name)` | `src/services/greet/GreetService.ts` 包装 `@bindings/foundation/internal/services/greet` |
+| 方法调用 | `GreetService.greet(name)` | `src/services/greet/GreetService.ts` 包装 `@bindings/narrafork-launcher/internal/services/greet` |
 | 偏好读写 | `PreferencesService.{get/set/list/delete/reset}` | `src/services/preferences/PreferencesService.ts` |
 | 应用设置 | `AppSettingsService.{get,setThemeChoice,setCustomTheme,resetCustomTheme,setLocaleChoice,onChanged}` | `src/services/appsettings/AppSettingsService.ts` |
 | 数据存储 | `StorageService.{getStats,setCustomPath,resetPath}` | `src/services/storage/StorageService.ts` |
 | 原生对话框 | `NativeDialogs.{openFile,openFiles,openDirectory,saveFile,confirm,info,warning,error}` | `src/services/dialogs/NativeDialogs.ts` |
-| 表格导出 | `ExportService.saveCSV({ defaultFilename, content, title?, filterLabel? })` / `saveXLSX({ defaultFilename, table, title?, filterLabel? })`：原生「另存为」→ 后端 `exportsvc.WriteCSV`（UTF-8 BOM）/ `WriteXLSX`（excelize，表头加粗冻结、数字保持数值），统一 `filex.WriteAtomic` 落盘；取消返回 `null`，写失败 reject；`title` / `filterLabel` 由调用方传 `t()` 结果 | `src/services/export/ExportService.ts` 包装 `@bindings/foundation/internal/services/exportsvc` |
+| 表格导出 | `ExportService.saveCSV({ defaultFilename, content, title?, filterLabel? })` / `saveXLSX({ defaultFilename, table, title?, filterLabel? })`：原生「另存为」→ 后端 `exportsvc.WriteCSV`（UTF-8 BOM）/ `WriteXLSX`（excelize，表头加粗冻结、数字保持数值），统一 `filex.WriteAtomic` 落盘；取消返回 `null`，写失败 reject；`title` / `filterLabel` 由调用方传 `t()` 结果 | `src/services/export/ExportService.ts` 包装 `@bindings/narrafork-launcher/internal/services/exportsvc` |
 | 子进程 | `SubprocessService`（白名单命令） | `src/services/subprocess/SubprocessService.ts` |
 | 子窗口 | `ChildWindowService.{open,close,list}` + 事件总线 `broadcast` / `onBroadcast` / `sendToWindow` | `src/services/childwindow/` |
-| 系统托盘 | `SystrayService.{enable,disable,isEnabled,setMenuLabels}`（开关由后端持久化到 preferences `systray.enabled`，启动自动恢复） | `src/services/systray/SystrayService.ts` 包装 `@bindings/foundation/internal/app/systrayservice` |
+| 系统托盘 | `SystrayService.{enable,disable,isEnabled,setMenuLabels}`（开关由后端持久化到 preferences `systray.enabled`，启动自动恢复） | `src/services/systray/SystrayService.ts` 包装 `@bindings/narrafork-launcher/internal/app/systrayservice` |
 | 事件订阅 | `time` 事件 → `useTimeEvent()` | `src/shared/hooks/useTimeEvent.ts` |
 | 事件订阅 | `appsettings:changed`（payload = 字段名）→ `AppSettingsService.onChanged(cb)`，`FoundationThemeProvider`（200ms 防抖）/ `I18nProvider` 据此重拉 | `src/services/appsettings/AppSettingsService.ts` |
 | 布局预设 | `useLayoutPreset()` → `{ preset, presets, setLayout }`；`layoutRegistry.{register,has,list,resolve}`；偏好键 `layout` / `navCollapsed` / `floatDockSide` / `floatDockY` 经 `PreferencesService` 存 SQLite | `src/layouts/` |
@@ -448,7 +448,7 @@ SettingsPage/
 
 - TypeScript strict 模式 + `noUncheckedIndexedAccess` 已开启；`pnpm typecheck`。
 - **E2E：Playwright**（`playwright.config.ts` + `e2e/`）
-  - 被测对象是 Wails **server 模式**二进制：先在仓库根 `wails3 task build:server`（产物 `bin/foundation-server`，无原生窗口、纯 HTTP），再 `cd frontend && pnpm e2e`。`webServer` 每次清空并重建数据目录后启动它，`FOUNDATION_DATA_DIR` 指向 `<repo>/.e2e-data`（隔离，绝不触碰用户真实数据库），端口经 `WAILS_SERVER_PORT` 传入。
+  - 被测对象是 Wails **server 模式**二进制：先在仓库根 `wails3 task build:server`（产物 `bin/narrafork-launcher-server`，无原生窗口、纯 HTTP），再 `cd frontend && pnpm e2e`。`webServer` 每次清空并重建数据目录后启动它，`NARRAFORK_LAUNCHER_DATA_DIR` 指向 `<repo>/.e2e-data`（隔离，绝不触碰用户真实数据库），端口经 `WAILS_SERVER_PORT` 传入。
   - 环境变量：`E2E_CHANNEL`（默认 `msedge`，用本机已装 Edge 免下载；CI 可设 `chromium` 并先 `npx playwright install chromium`）、`E2E_PORT`（默认 9346）、`E2E_DATA_DIR`。
   - 串行（`workers: 1`），`locale: 'zh-CN'`，viewport 1280×800 @2x。
   - `e2e/helpers.ts`：`openApp(page)`（等 `#startup-skeleton` 消失 = 偏好已读回）、`chooseLayout(page, label)`（像用户一样经「设置 → 布局」切换预设，写入真实后端）。
@@ -459,10 +459,10 @@ SettingsPage/
 
 ## 常见问题 (FAQ)
 
-- Q：`@bindings/foundation/...` 报模块找不到？
+- Q：`@bindings/narrafork-launcher/...` 报模块找不到？
   - A：bindings 是 Wails 在 dev / generate 时生成的。首次执行 `wails3 dev` 或 `wails3 generate bindings` 后才会出现。该目录已 `.gitignore`。
 - Q：改了 Go module 名后前端报错？
-  - A：bindings 路径前缀就是 module 名。改 `go.mod` 后必须重新跑 `wails3 generate bindings`，并修改 `src/services/greet/GreetService.ts` 中的 `@bindings/foundation/...` 路径。
+  - A：bindings 路径前缀就是 module 名。改 `go.mod` 后必须重新跑 `wails3 generate bindings`，并修改 `src/services/greet/GreetService.ts` 中的 `@bindings/narrafork-launcher/...` 路径。
 - Q：能否换回 JavaScript？
   - A：可以，但会丢失 ViewModel 类型契约。如果要换，请保留 `<Name>.types.ts` 写 JSDoc 类型；不推荐。
 - Q：标题栏拖拽不工作？
@@ -483,7 +483,7 @@ frontend/
 ├── package.json               # 依赖与脚本
 ├── vite.config.ts             # Vite 配置 + 路径别名 + rolldownOptions 多入口（main / child / systray）
 ├── tsconfig.json              # TS strict + paths
-├── playwright.config.ts       # E2E 配置（server 模式二进制 + FOUNDATION_DATA_DIR 隔离）
+├── playwright.config.ts       # E2E 配置（server 模式二进制 + NARRAFORK_LAUNCHER_DATA_DIR 隔离）
 ├── e2e/                       # Playwright 用例：helpers / floating-dock / screenshots
 ├── public/                    # 静态资源
 │   ├── wails.png

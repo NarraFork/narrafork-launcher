@@ -20,10 +20,10 @@ export const zhCN: Locale = {
         showWindow: '显示主窗口',
         quit: '退出',
       },
-      title: 'Foundation',
+      title: 'NarraFork Launcher',
     },
     sidebar: {
-      brand: 'F',
+      brand: 'N',
       navAriaLabel: '主导航',
       collapse: '收起侧栏',
       expand: '展开侧栏',
@@ -39,8 +39,9 @@ export const zhCN: Locale = {
       },
     },
     route: {
-      home: '首页',
-      xProDemo: 'X-Pro 组件',
+      console: '控制台',
+      versions: '版本',
+      dependencies: '依赖',
       settings: '设置',
     },
     common: {

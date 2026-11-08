@@ -5,13 +5,13 @@ version: '3'
 
 # This information is used to generate the build assets.
 info:
-  companyName: "My Company" # The name of the company
-  productName: "My Product" # The name of the application
-  productIdentifier: "com.example.foundation" # The unique product identifier
-  description: "A foundation application" # The application description
-  copyright: "© 2026, My Company" # Copyright text
+  companyName: "NarraFork" # The name of the company
+  productName: "NarraFork Launcher" # The name of the application
+  productIdentifier: "com.narrafork.launcher" # The unique product identifier
+  description: "NarraFork launcher and downloader" # The application description
+  copyright: "© 2026, NarraFork" # Copyright text
   comments: "This is a comment" # Comments
-  version: "2.0.0" # The application version
+  version: "0.1.0" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
   #                               # Should match the name of your .icon file without the extension
   #                               # If not set and Assets.car exists, defaults to "appicon"

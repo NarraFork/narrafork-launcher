@@ -2,6 +2,7 @@ import { Text, Title, UnstyledButton } from '@mantine/core';
 import { useT } from '@/i18n';
 import classes from './SettingsPage.module.css';
 import { useSettingsPage } from './useSettingsPage';
+import { LauncherSettings } from './launcher';
 import { Personalization } from './personalization';
 import { Layout } from './layout';
 import { Language } from './language';
@@ -56,6 +57,7 @@ export const SettingsPage = () => {
           <Text className={classes.detailDesc}>{t(vm.activeItem.descriptionKey)}</Text>
         </div>
 
+        {vm.activeItem.id === 'launcher' && <LauncherSettings />}
         {vm.activeItem.id === 'personalization' && <Personalization />}
         {vm.activeItem.id === 'layout' && <Layout />}
         {vm.activeItem.id === 'language' && <Language />}

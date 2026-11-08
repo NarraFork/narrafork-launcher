@@ -4,7 +4,7 @@ import (
 	"embed"
 	"log"
 
-	"foundation/internal/app"
+	"narrafork-launcher/internal/app"
 )
 
 //go:embed all:frontend/dist

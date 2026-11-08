@@ -49,7 +49,7 @@ const (
 	defaultBackups      = 3
 )
 
-const AppDirName = "Foundation" // 与 storage / cryptox 保持一致
+const AppDirName = "NarraForkLauncher" // 与 storage / cryptox 保持一致
 
 var (
 	initOnce  sync.Once
@@ -152,7 +152,7 @@ func Debug(msg string, args ...any) { For("").Debug(msg, args...) }
 
 func defaultLogDir() (string, error) {
 	// 与 storage.DataDirEnv 一致：设置后日志写到 <该目录>/logs
-	if v := os.Getenv("FOUNDATION_DATA_DIR"); v != "" {
+	if v := os.Getenv("NARRAFORK_LAUNCHER_DATA_DIR"); v != "" {
 		return filepath.Join(v, "logs"), nil
 	}
 	switch runtime.GOOS {

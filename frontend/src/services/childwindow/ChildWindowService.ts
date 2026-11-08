@@ -12,7 +12,7 @@ export interface ChildWindowOpenOptions {
 
 async function loadBindings() {
   // @ts-ignore bindings generated at runtime by wails3
-  return await import('@bindings/foundation/internal/app/childwindowservice');
+  return await import('@bindings/narrafork-launcher/internal/app/childwindowservice');
 }
 
 export const ChildWindowService = {

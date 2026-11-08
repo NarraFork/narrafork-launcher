@@ -8,7 +8,7 @@
         AllowPromptForPassword="false">
     </Settings>
     <Installer
-        Path="foundation.exe"
+        Path="narrafork-launcher.exe"
         Arguments=""
         InstallLocation="C:\Program Files\My Company\My Product">
     </Installer>
@@ -28,7 +28,7 @@
                 Id="com.example.foundation"
                 Description="A foundation application"
                 DisplayName="My Product"
-                ExecutableName="foundation.exe"
+                ExecutableName="narrafork-launcher.exe"
                 EntryPoint="Windows.FullTrustApplication">
                 
             </Application>

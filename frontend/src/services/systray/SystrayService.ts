@@ -3,7 +3,7 @@
 //
 // 后端负责：运行时创建 / 销毁托盘 + 面板窗口、把开关持久化到 SQLite preferences 表，
 // 并在下次启动时自动恢复。前端只需调用 enable / disable，并用 isEnabled 读当前状态。
-import * as SystrayServiceBinding from '@bindings/foundation/internal/app/systrayservice';
+import * as SystrayServiceBinding from '@bindings/narrafork-launcher/internal/app/systrayservice';
 
 export const SystrayService = {
   enable(): Promise<void> {

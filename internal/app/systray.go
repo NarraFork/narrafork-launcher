@@ -6,8 +6,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"foundation/internal/services/preferences"
-	"foundation/internal/utils/logx"
+	"narrafork-launcher/internal/services/preferences"
+	"narrafork-launcher/internal/utils/logx"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"

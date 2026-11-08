@@ -2,7 +2,7 @@
 //
 // 切换路径是后端的"原子操作"——前端只需调用，期间业务请求会短暂阻塞
 // （单连接池），完成后正常恢复。失败时后端已回滚到旧路径，可继续使用。
-import { Service as Binding } from '@bindings/foundation/internal/services/storagesvc';
+import { Service as Binding } from '@bindings/narrafork-launcher/internal/services/storagesvc';
 
 export interface StorageStats {
   path: string;

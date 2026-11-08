@@ -1,0 +1,169 @@
+.root {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--fd-bg-content);
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  padding: 20px;
+  background-color: var(--fd-bg-surface);
+  border: 1px solid var(--fd-divider);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fd-text-primary);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--fd-text-muted);
+  margin-top: -8px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--fd-text-muted);
+}
+
+.value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fd-text-primary);
+  display: flex;
+  align-items: center;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ok {
+  font-size: 13px;
+  color: var(--fd-success);
+}
+
+.error {
+  font-size: 13px;
+  color: var(--fd-danger);
+  user-select: text;
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.progressRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.progressText {
+  font-size: 13px;
+  color: var(--fd-text-secondary);
+}
+
+.dirRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.path {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  color: var(--fd-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.release {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--fd-divider);
+  border-radius: 6px;
+}
+
+.release[data-installed] {
+  border-color: var(--fd-accent);
+  background-color: var(--fd-bg-active);
+}
+
+.releaseMain {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.releaseTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.releaseVersion {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fd-text-primary);
+}
+
+.releaseMeta {
+  font-size: 12px;
+  color: var(--fd-text-muted);
+}
+
+.releaseActions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}

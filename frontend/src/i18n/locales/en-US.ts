@@ -13,10 +13,10 @@ export const enUS: Locale = {
         showWindow: 'Show Window',
         quit: 'Quit',
       },
-      title: 'Foundation',
+      title: 'NarraFork Launcher',
     },
     sidebar: {
-      brand: 'F',
+      brand: 'N',
       navAriaLabel: 'Primary navigation',
       collapse: 'Collapse sidebar',
       expand: 'Expand sidebar',
@@ -32,8 +32,9 @@ export const enUS: Locale = {
       },
     },
     route: {
-      home: 'Home',
-      xProDemo: 'X-Pro Components',
+      console: 'Console',
+      versions: 'Versions',
+      dependencies: 'Dependencies',
       settings: 'Settings',
     },
     common: {

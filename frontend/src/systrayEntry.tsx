@@ -14,7 +14,6 @@ import { FoundationThemeProvider, registerFoundationThemes } from '@/styles/them
 import { SystrayPanel, registerSystrayLocales } from '@/systray';
 import '@/systray/modules/AppStatus';
 import '@/systray/modules/QuickActions';
-import '@/systray/modules/Notifications';
 import '@/systray/modules/ExitButton';
 
 registerFoundationThemes();

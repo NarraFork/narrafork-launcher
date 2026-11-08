@@ -7,7 +7,7 @@ import "github.com/wailsapp/wails/v3/pkg/application"
 func systrayWindowOptions() application.WebviewWindowOptions {
 	return application.WebviewWindowOptions{
 		Name:            "systray-panel",
-		Title:           "Foundation",
+		Title:           "NarraFork Launcher",
 		Width:           320,
 		Height:          420,
 		Frameless:       true,

@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"foundation/internal/storage"
+	"narrafork-launcher/internal/storage"
 )
 
 // Service 暴露给前端：路径管理 + 统计。

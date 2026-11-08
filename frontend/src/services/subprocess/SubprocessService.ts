@@ -9,7 +9,7 @@
 //   - subprocess:exit:<id>
 // 业务方用 onLine / onExit 订阅即可，无需直接接 Events。
 import { Events } from '@wailsio/runtime';
-import { Service as Binding } from '@bindings/foundation/internal/services/subprocess';
+import { Service as Binding } from '@bindings/narrafork-launcher/internal/services/subprocess';
 
 export interface RunSpec {
   name: string;     // 白名单 key

@@ -26,6 +26,11 @@ export const useSettingsPage = (): UseSettingsPageResult => {
   const items = useMemo<SettingsItem[]>(
     () => [
       {
+        id: 'launcher',
+        labelKey: 'settings.list.launcher.label',
+        descriptionKey: 'settings.list.launcher.description',
+      },
+      {
         id: 'personalization',
         labelKey: 'settings.list.personalization.label',
         descriptionKey: 'settings.list.personalization.description',

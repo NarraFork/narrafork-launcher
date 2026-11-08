@@ -20,8 +20,8 @@ import (
 
 	"github.com/xuri/excelize/v2"
 
-	"foundation/internal/utils/filex"
-	"foundation/internal/utils/logx"
+	"narrafork-launcher/internal/utils/filex"
+	"narrafork-launcher/internal/utils/logx"
 )
 
 // Table 是 XLSX 导出的数据载荷。

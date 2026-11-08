@@ -20,8 +20,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"foundation/internal/utils/logx"
-	"foundation/internal/utils/procx"
+	"narrafork-launcher/internal/utils/logx"
+	"narrafork-launcher/internal/utils/procx"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )

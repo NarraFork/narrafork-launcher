@@ -9,7 +9,7 @@ import "github.com/wailsapp/wails/v3/pkg/application"
 // 让前端在按钮右侧绘制自定义标题文本。
 func windowOptions() application.WebviewWindowOptions {
 	return application.WebviewWindowOptions{
-		Title:            "Foundation",
+		Title:            "NarraFork Launcher",
 		Width:            1280,
 		Height:           800,
 		MinWidth:         960,

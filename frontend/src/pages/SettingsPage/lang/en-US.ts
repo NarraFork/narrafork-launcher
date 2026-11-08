@@ -7,6 +7,10 @@ export const settingsPageEnUS: Messages = {
     eyebrow: 'Settings',
     title: 'Preferences',
     list: {
+      launcher: {
+        label: 'Launcher',
+        description: 'NarraFork server, open mode, updates and browser data',
+      },
       personalization: {
         label: 'Personalization',
         description: 'Theme, display preferences, and custom palette',

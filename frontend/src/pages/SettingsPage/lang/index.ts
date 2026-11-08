@@ -1,6 +1,7 @@
 import { localeRegistry } from '@/i18n';
 import { settingsPageZhCN } from './zh-CN';
 import { settingsPageEnUS } from './en-US';
+import { registerLauncherSettingsLocales } from '../launcher/lang';
 import { registerPersonalizationLocales } from '../personalization/lang';
 import { registerLayoutLocales } from '../layout/lang';
 import { registerLanguageLocales } from '../language/lang';
@@ -15,6 +16,7 @@ export const registerSettingsPageLocales = (): void => {
   if (registered) return;
   localeRegistry.extend('zh-CN', settingsPageZhCN);
   localeRegistry.extend('en-US', settingsPageEnUS);
+  registerLauncherSettingsLocales();
   registerPersonalizationLocales();
   registerLayoutLocales();
   registerLanguageLocales();

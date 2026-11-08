@@ -26,7 +26,7 @@ interface ExportBindings {
 // bindings 由 wails3 generate bindings 生成；开发期可能尚不存在，故用 dynamic import。
 async function loadBindings(): Promise<ExportBindings> {
   // @ts-ignore bindings generated at runtime by wails3
-  return (await import('@bindings/foundation/internal/services/exportsvc')) as ExportBindings;
+  return (await import('@bindings/narrafork-launcher/internal/services/exportsvc')) as ExportBindings;
 }
 
 // 过滤器显示名由调用方经 t() 传入（filterLabel）；未传时用格式名兜底（非自然语言）。

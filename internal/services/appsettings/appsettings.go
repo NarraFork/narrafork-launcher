@@ -11,8 +11,8 @@ package appsettings
 import (
 	"context"
 
-	"foundation/internal/events"
-	"foundation/internal/storage"
+	"narrafork-launcher/internal/events"
+	"narrafork-launcher/internal/storage"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"gorm.io/gorm"

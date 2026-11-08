@@ -14,10 +14,10 @@
 
 - 后端：Go 1.26（Wails v3.1.0 要求），`main.go` 仅做 `embed.FS` + `app.Run`，业务装配集中在 `internal/app`。
 - 前端：React 19 + TypeScript（strict）+ Mantine 9（`@mantine/core` / `@mantine/charts` on recharts / `mantine-datatable`）+ `@tabler/icons-react` + Vite 8。主题为注册式预设，统一在 `frontend/src/styles/themes/`（`buildMantineTheme.ts` 把 `FoundationPalette` 编译为 CSS 变量 `--fd-*` + Mantine 主色 `foundation`），全局样式 `frontend/src/styles/global.css`；组件样式用 CSS Modules（`<Name>.module.css`）。
-- 通信：通过 `wails3 generate bindings` 生成 `frontend/bindings/foundation/...`，前端 `services/` 层包装。
+- 通信：通过 `wails3 generate bindings` 生成 `frontend/bindings/narrafork-launcher/...`，前端 `services/` 层包装。
 - 构建：根 `Taskfile.yml` 调用各平台子 Taskfile（Windows/macOS/Linux/iOS/Android/Docker）。
 - 布局：外壳 `components/AppLayout` 是 CSS Grid（`title` / `nav` / `main` 区域），由**布局预设**（`frontend/src/layouts/`，`nav.variant × nav.placement × frame`）经 `data-placement` / `data-frame` / `data-dock-side` 切换；导航组件统一在 `components/Navigation`（NavRail / NavSidebar / NavBar / NavDock / NavigationDrawerButton）。当前预设持久化在 preferences 表（`layout` / `navCollapsed` / `floatDockSide` / `floatDockY`）。标题栏高度为 CSS 变量 `--fd-titlebar-h`（macOS 40px 与红绿灯居中对齐，见 `internal/app/window_darwin.go` 的 `macTitleBar()`；其它平台 36px）。
-- 测试：Go 单测（`internal/services/exportsvc`）+ Playwright E2E（`frontend/e2e/`，跑 Wails server 模式二进制 + `FOUNDATION_DATA_DIR` 隔离数据目录）。
+- 测试：Go 单测（`internal/services/exportsvc`）+ Playwright E2E（`frontend/e2e/`，跑 Wails server 模式二进制 + `NARRAFORK_LAUNCHER_DATA_DIR` 隔离数据目录）。
 
 通信链路：
 
@@ -25,7 +25,7 @@
 React 组件 (View)
     └── ViewModel (use<Page>)
         └── services/GreetService.ts
-            └── @bindings/foundation/internal/services/greet (Wails 生成)
+            └── @bindings/narrafork-launcher/internal/services/greet (Wails 生成)
                 └── 后端 internal/services/greet.Greet
 
 后端 internal/events/events.go (RegisterEvent[string]("time"))
@@ -82,7 +82,7 @@ graph TD
 | 应用入口 | `main.go` | Go | 仅含 `embed.FS` 与 `app.Run(assets)`，业务下沉到 `internal/` |
 | 应用启动 | `internal/app/` | Go | 服务注册、平台窗口配置、事件循环、子窗口（ChildWindowService）、系统托盘（SystrayService，`systray*.go` 分平台） |
 | 业务服务 | `internal/services/` | Go | Wails Service（每个领域一个子包：greet / preferences / appsettings / storagesvc / exportsvc（表格导出 CSV / XLSX）/ subprocess） |
-| 持久化层 | `internal/storage/` | Go + GORM | SQLite 打开 / PRAGMA / AutoMigrate / 路径配置（含 `FOUNDATION_DATA_DIR` 覆盖）/ Holder |
+| 持久化层 | `internal/storage/` | Go + GORM | SQLite 打开 / PRAGMA / AutoMigrate / 路径配置（含 `NARRAFORK_LAUNCHER_DATA_DIR` 覆盖）/ Holder |
 | 工具层 | `internal/utils/` | Go | httpx（HTTP）/ procx（子进程 + JobObject）/ cryptox（AES-GCM）/ logx（slog + rotate）/ filex（原子写） |
 | 事件契约 | `internal/events/` | Go | 集中注册类型化事件，前后端共享名称 |
 | 前端 UI | `frontend/` | React 19 + Mantine 9 + TS | 用户界面、调用 Service、订阅事件 |
@@ -105,8 +105,8 @@ graph TD
 | `cd frontend && pnpm build` | 前端单独生产构建 |
 | `go build .` | 后端单独构建（需要 `frontend/dist` 已存在） |
 | `go test ./internal/...` | Go 单元测试 |
-| `wails3 task build:server` | 构建 server 模式二进制 `bin/foundation-server`（无 GUI，纯 HTTP；E2E 前置） |
-| `cd frontend && pnpm e2e` | Playwright E2E（自动启动 `bin/foundation-server`，数据目录隔离到 `.e2e-data/`） |
+| `wails3 task build:server` | 构建 server 模式二进制 `bin/narrafork-launcher-server`（无 GUI，纯 HTTP；E2E 前置） |
+| `cd frontend && pnpm e2e` | Playwright E2E（自动启动 `bin/narrafork-launcher-server`，数据目录隔离到 `.e2e-data/`） |
 | `cd frontend && pnpm e2e:screenshots` | 重新生成 README 截图到 `docs/screenshots/` |
 
 ## 改名 / 业务化指南
@@ -114,8 +114,8 @@ graph TD
 由于 `foundation` 既是模块名又是 bindings 路径前缀，改名顺序很关键：
 
 1. 改 `go.mod` 的 `module foundation` → `module <你的名字>`
-2. 全局替换 `import "foundation/internal/app"` 为新模块名
-3. 改前端 `services/greet/GreetService.ts` 中的 `@bindings/foundation/...` 路径
+2. 全局替换 `import "narrafork-launcher/internal/app"` 为新模块名
+3. 改前端 `services/greet/GreetService.ts` 中的 `@bindings/narrafork-launcher/...` 路径
 4. 跑 `go mod tidy` 与 `wails3 generate bindings`
 5. 改 `build/config.yml` 的 `info.*` 字段并 `wails3 task common:update:build-assets`
 6. 改 `Taskfile.yml` 的 `APP_NAME`、`internal/app/app.go` 的 `Name/Description`、`frontend/src/App.tsx` 的 title
@@ -128,7 +128,7 @@ graph TD
 
 应用所有跨会话状态存到 `~/Library/Application Support/Foundation/foundation.db`（macOS）/ `%AppData%\Foundation\foundation.db`（Windows）/ `~/.local/share/Foundation/foundation.db`（Linux），位置可由用户在「设置 → 数据存储」里改。配置文件 `storage.json` 与默认数据库放在同目录（独立于 db）。
 
-**数据根目录覆盖**：设置环境变量 `FOUNDATION_DATA_DIR=<dir>`（`internal/storage/paths.go` 的 `DataDirEnv`）后，数据根直接用该目录（不再拼 `AppDirName`）；`cryptox` 主密钥放同目录、`logx` 日志写 `<dir>/logs`。用于便携版 / E2E / server 模式隔离数据。
+**数据根目录覆盖**：设置环境变量 `NARRAFORK_LAUNCHER_DATA_DIR=<dir>`（`internal/storage/paths.go` 的 `DataDirEnv`）后，数据根直接用该目录（不再拼 `AppDirName`）；`cryptox` 主密钥放同目录、`logx` 日志写 `<dir>/logs`。用于便携版 / E2E / server 模式隔离数据。
 
 **驱动 / ORM**：`modernc.org/sqlite`（纯 Go，无 CGO 需求）+ `gorm.io/gorm` + `github.com/glebarez/sqlite`（GORM 对接 modernc 的适配）。
 
@@ -163,7 +163,7 @@ func (s *Service) DoSomething(ctx context.Context) error {
 
 - **Go 单元测试**：`internal/services/exportsvc/exportsvc_test.go`（CSV / XLSX 导出）。新增测试放 `internal/services/<domain>/<name>_test.go`，`go test ./internal/...`。
 - **E2E（Playwright）**：`frontend/playwright.config.ts` + `frontend/e2e/`
-  - 被测对象是 Wails **server 模式**二进制（`wails3 task build:server` → `bin/foundation-server`，`-tags server`，无原生窗口，纯 HTTP），即真实 Go 后端 + 真实前端；Playwright `webServer` 每次先清空再启动，`FOUNDATION_DATA_DIR` 指向隔离目录 `.e2e-data/`（已 gitignore），绝不碰用户真实数据库。
+  - 被测对象是 Wails **server 模式**二进制（`wails3 task build:server` → `bin/narrafork-launcher-server`，`-tags server`，无原生窗口，纯 HTTP），即真实 Go 后端 + 真实前端；Playwright `webServer` 每次先清空再启动，`NARRAFORK_LAUNCHER_DATA_DIR` 指向隔离目录 `.e2e-data/`（已 gitignore），绝不碰用户真实数据库。
   - 浏览器默认 `channel: 'msedge'`（用本机已装的 Edge，免 `playwright install`）；环境变量 `E2E_CHANNEL`（CI 可设 `chromium` 并预装）/ `E2E_PORT`（默认 9346，传给 `WAILS_SERVER_PORT`）/ `E2E_DATA_DIR`。串行执行（`workers: 1`，共用一个后端）。
   - `e2e/helpers.ts`：`openApp`（等 `#startup-skeleton` 消失 = 偏好已读回）、`chooseLayout`（经设置页切换布局预设）。
   - `e2e/floating-dock.spec.ts`：悬浮 Dock 拖到任意位置都留在内容区内（不进标题栏 / 红绿灯）、松手后手柄仍可拖、刷新后位置持久化。
@@ -208,6 +208,6 @@ func (s *Service) DoSomething(ctx context.Context) error {
 - 2026-05-28（数据可视化 + 表清理）：`internal/storage/models.go` 引入 `ModelDescriptor`（labelKey / clearable）；`storagesvc` 新增 `GetTableStats`（dbstat 精确字节，回退按行数估算）+ `ClearTable`（白名单 + clearable 校验）；前端升级 `@mui/x-charts@^9.3.0`，数据存储页新增双图（PieChart 占比 + 横向 BarChart 字节）+ 逐表清空（带原生确认对话框）；新增 Icon 规范铁律：UI 图标必须用 `@mui/icons-material`，禁止 emoji / Unicode 符号 / 第三方 icon 包。
 - 2026-05-28（工具层）：新增 `internal/utils/`：`httpx`（HTTP 客户端 + JSON helper + 重试，单例 client）、`procx`（子进程 + Windows JobObject / Unix setpgid，父进程崩溃连带 kill）、`cryptox`（AES-GCM 对称加密，主密钥 ~/.../<App>/.master.key）、`logx`（slog + 控制台 + 文件 rotate）、`filex`（原子写、限长读）；新增 `internal/services/subprocess` 白名单子进程 service（前端可调，命令必须在 commands.go 注册并通过 ArgPattern 校验）；改造 `storage/config.go` 走 filex.WriteAtomic 保护 storage.json；新增 `foundation-utils` SKILL。
 - 2026-08-17（Wails 升级 alpha.96 → beta.9）：`go.mod` 升到 `github.com/wailsapp/wails/v3 v3.0.0-beta.9`（`go mod tidy` 自动移除已折叠进 v3 的独立 `webview2` indirect 依赖）；前端 `@wailsio/runtime` 由 `"latest"` **锁定**为 `3.0.0-beta.9`（避免 beta 期间 latest 漂移），bindings 用 beta.9 CLI 重新生成。**无业务代码改动**——项目用到的整套 application/events/window/systray API 在 beta.9 签名不变（`internal/...` 全部 `go build` + `go vet` 通过，前端 `pnpm typecheck` 通过）。同步更新 `.claude/skills/` 下 Wails 知识库到 beta.9：修正 `wails-bindings` 破坏性变更（2 参 `NewService(x, ServiceOptions{})` → `NewServiceWithOptions`；`time.Time` 默认映射由 `Date` 改为 RFC3339Nano 字符串、`[]byte`→base64 字符串、新增 `-time-type` flag）；`wails-runtime-features` 修正 `KeyBinding`「global」措辞并新增 `app.GlobalShortcut`（系统级快捷键）、前端 `System.IsMobile/IsDesktop/...` 平台检测、通知增强字段（Sound/Attachments/ThreadID/InterruptionLevel/Schedule）；`wails-window` 补 `WindowsWindow.DisableMenu` 与 macOS `Mac.CornerType/CornerRadius`；`wails-application` 新增 `application.System` 平台检测；`wails-advanced` 新增 Streams（`app.HandleStream`）与内置 MCP Server（`mcp` tag）两节 + 官方 `streams.md`/`streams-from-websockets.md` 参考；`wails-overview/references/changelog.md` 与 `INDEX.md` 基准刷新到 beta.9。
-- 2026-11-06（Wails v3.1.0 + Mantine）：`go.mod` 升到 `github.com/wailsapp/wails/v3 v3.1.0`（v3.0.0 GA 后首个 weekly；`go 1.26.0`），`@wailsio/runtime` 锁 `3.1.0`，Go API 面零改动；`build/` 资产按 v3.1.0 模板同步（各平台 Taskfile / Docker / Android / iOS / 新增 dmg 资源，修正 `foundation.exe` 命名），`build/config.yml` info.* 对齐为实际值，根 Taskfile 增加 `GOOS` 分发与 `install:msix:tools`。前端 UI 库 **MUI 9 → Mantine 9.7.5**：主题改为 `buildMantineTheme`（`--fd-*` CSS 变量 + `foundation` 主色阶 + 语义变量映射），样式文件 `<Name>.styles.ts` → `<Name>.module.css`；图标 `@mui/icons-material` → `@tabler/icons-react`；图表 `@mui/x-charts` → `@mantine/charts`（recharts 3），x-pro 八种高级图表改为封装原生组件（Gantt 保留 SVG）；x-pro DataGridPro/Premium 基于 `mantine-datatable` 重写（列类型 `DataGridColumn<T>`，全部 Pro/Premium 功能保留，表格文案独立 i18n）；移除全部 `@mui/*` / `@emotion/*`；`foundation-mui*` 11 个 skill 替换为 `foundation-mantine` / `-components` / `-icons` / `-charts` / `-datatable`。
+- 2026-11-06（Wails v3.1.0 + Mantine）：`go.mod` 升到 `github.com/wailsapp/wails/v3 v3.1.0`（v3.0.0 GA 后首个 weekly；`go 1.26.0`），`@wailsio/runtime` 锁 `3.1.0`，Go API 面零改动；`build/` 资产按 v3.1.0 模板同步（各平台 Taskfile / Docker / Android / iOS / 新增 dmg 资源，修正 `narrafork-launcher.exe` 命名），`build/config.yml` info.* 对齐为实际值，根 Taskfile 增加 `GOOS` 分发与 `install:msix:tools`。前端 UI 库 **MUI 9 → Mantine 9.7.5**：主题改为 `buildMantineTheme`（`--fd-*` CSS 变量 + `foundation` 主色阶 + 语义变量映射），样式文件 `<Name>.styles.ts` → `<Name>.module.css`；图标 `@mui/icons-material` → `@tabler/icons-react`；图表 `@mui/x-charts` → `@mantine/charts`（recharts 3），x-pro 八种高级图表改为封装原生组件（Gantt 保留 SVG）；x-pro DataGridPro/Premium 基于 `mantine-datatable` 重写（列类型 `DataGridColumn<T>`，全部 Pro/Premium 功能保留，表格文案独立 i18n）；移除全部 `@mui/*` / `@emotion/*`；`foundation-mui*` 11 个 skill 替换为 `foundation-mantine` / `-components` / `-icons` / `-charts` / `-datatable`。
 - 2026-11-06（v1.0.0 收尾）：**系统托盘端到端可用**（Go `SystrayService` Enable/Disable/IsEnabled/SetMenuLabels，开关持久化到 preferences `systray.enabled` 并启动恢复，面板失焦 / Esc 隐藏，托盘菜单文案走 i18n，面板「打开设置」驱动主窗口路由；移除 `src/settings.ts`）；**表格导出走原生「另存为」**（新增 `internal/services/exportsvc`：CSV 带 BOM / excelize 生成真 `.xlsx`，`filex.WriteAtomic` 落盘；前端 `services/export/ExportService`）；DataGrid 新增列菜单（排序 / 钉住 / 隐藏 / 管理列）、列宽拖拽、钉住行按实测行高定位；漏斗图支持横向；x-pro 图表独立语言包 `registerXProChartsLocales`，演示数据全部 i18n；**跨窗口设置同步**（后端 appsettings 写入后广播 `appsettings:changed`，主窗口 / 子窗口 / 托盘面板的主题与语言实时一致，子窗口不再固定 light）；分包修复（Vite 8 用 `rolldownOptions`，懒加载页骨架独立 `*.skeleton.module.css`、语言包从 `<sub>/lang` 导入，首屏不再预加载 recharts / datatable）；应用版本以 `build/config.yml` 为唯一事实源（前端 `__APP_VERSION__`），升到 **1.0.0**；GORM 日志忽略 record-not-found；wails-* skill 同步到 v3.1.0 文档（M-Press `docs/mpress/content`）；新增 `docs/MIGRATION-v1.md` 迁移指南。
-- 2026-11-06（**v2.0.0** 布局系统 + E2E）：新增**布局预设系统** `frontend/src/layouts/`（`LayoutPreset` = `nav.variant` × `nav.placement` × `frame`，9 个内置预设 classic（默认）/ sidebar / topnav / titlebar / right / dock / floating / inset / focus，`layoutRegistry.register` 扩展，持久化到 preferences `layout` + `navCollapsed` / `floatDockSide` / `floatDockY`）；`AppLayout` 重写为 CSS Grid（`data-placement` / `data-frame` / `data-dock-side` 切换）；新增 `components/Navigation`（NavRail / NavSidebar / NavBar / NavDock / NavigationDrawerButton + 共享 `useNavigation`），`components/Sidebar` 改为 NavRail 的兼容出口；悬浮 Dock 可拖拽（指针捕获、夹取在内容区内不进 macOS 标题栏、双击手柄复位）；TitleBar 新增 `leading` / `center` 插槽，高度改为 `--fd-titlebar-h`（macOS 40px，`window_darwin.go` 改用 `MacToolbarStyleUnifiedCompact` + `InvisibleTitleBarHeight: 40` 使红绿灯垂直居中；`index.html` 首帧前写 `data-platform`）；设置页新增「布局」子页面（CSS 缩略图卡片 radiogroup + 折叠侧栏开关）；首页改为响应式卡片网格并新增「当前布局」卡片；路由 `navigate(id, params?)` + `params`（设置页读 `params.section`）；启动骨架改为等偏好读回（`PreferencesProvider.ready` → `signalAppReady` → `main.tsx`，兜底 1500ms），消除布局跳变；后端新增 `FOUNDATION_DATA_DIR` 覆盖数据 / 密钥 / 日志根目录；新增 Playwright E2E（server 模式二进制 + 隔离数据目录，`pnpm e2e` / `pnpm e2e:screenshots` → `docs/screenshots/`）；新增 `foundation-layout` SKILL。
+- 2026-11-06（**v2.0.0** 布局系统 + E2E）：新增**布局预设系统** `frontend/src/layouts/`（`LayoutPreset` = `nav.variant` × `nav.placement` × `frame`，9 个内置预设 classic（默认）/ sidebar / topnav / titlebar / right / dock / floating / inset / focus，`layoutRegistry.register` 扩展，持久化到 preferences `layout` + `navCollapsed` / `floatDockSide` / `floatDockY`）；`AppLayout` 重写为 CSS Grid（`data-placement` / `data-frame` / `data-dock-side` 切换）；新增 `components/Navigation`（NavRail / NavSidebar / NavBar / NavDock / NavigationDrawerButton + 共享 `useNavigation`），`components/Sidebar` 改为 NavRail 的兼容出口；悬浮 Dock 可拖拽（指针捕获、夹取在内容区内不进 macOS 标题栏、双击手柄复位）；TitleBar 新增 `leading` / `center` 插槽，高度改为 `--fd-titlebar-h`（macOS 40px，`window_darwin.go` 改用 `MacToolbarStyleUnifiedCompact` + `InvisibleTitleBarHeight: 40` 使红绿灯垂直居中；`index.html` 首帧前写 `data-platform`）；设置页新增「布局」子页面（CSS 缩略图卡片 radiogroup + 折叠侧栏开关）；首页改为响应式卡片网格并新增「当前布局」卡片；路由 `navigate(id, params?)` + `params`（设置页读 `params.section`）；启动骨架改为等偏好读回（`PreferencesProvider.ready` → `signalAppReady` → `main.tsx`，兜底 1500ms），消除布局跳变；后端新增 `NARRAFORK_LAUNCHER_DATA_DIR` 覆盖数据 / 密钥 / 日志根目录；新增 Playwright E2E（server 模式二进制 + 隔离数据目录，`pnpm e2e` / `pnpm e2e:screenshots` → `docs/screenshots/`）；新增 `foundation-layout` SKILL。

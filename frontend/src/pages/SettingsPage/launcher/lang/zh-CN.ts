@@ -1,0 +1,56 @@
+import type { Messages } from '@/i18n';
+
+export const launcherSettingsZhCN: Messages = {
+  settings: {
+    launcher: {
+      server: {
+        title: 'NarraFork 服务',
+        hint: '端口和主机留空时沿用 NarraFork 自己的设置（~/.narrafork/settings.json）。修改后重启服务生效。',
+        port: '端口',
+        portPlaceholder: '沿用 NarraFork 设置',
+        host: '主机',
+        hostPlaceholder: '沿用 NarraFork 设置',
+        binary: '自定义可执行文件',
+        binaryHint: '设置后启动该文件，不再使用自动下载的版本。',
+        binaryPlaceholder: '使用自动下载的版本',
+        binaryBrowse: '选择可执行文件',
+        binaryClear: '恢复为自动下载的版本',
+        binaryFilter: '可执行文件',
+      },
+      launch: {
+        title: '启动',
+        autoStart: '打开启动器时自动启动 NarraFork',
+        autoStartHint: '未下载时会先下载当前通道的最新版本。',
+        openOnReady: '服务就绪后自动打开 NarraFork',
+        mode: '打开方式',
+        modeInline: '内置窗口',
+        modeExternal: '系统浏览器',
+        closeAction: '关闭窗口时',
+        closeMinimize: '最小化到托盘',
+        closeQuit: '退出启动器（停止 NarraFork）',
+      },
+      updates: {
+        title: '更新',
+        autoUpdate: '自动更新 NarraFork',
+        autoUpdateHint: '启动前检查并下载当前通道的新版本。',
+        channel: '更新通道',
+        channelHint: '测试版包含 GitHub 上的预发布版本。',
+        stable: '稳定版',
+        beta: '测试版',
+      },
+      data: {
+        title: '内置浏览器数据',
+        hint: '只影响启动器内置窗口，不影响系统浏览器和 NarraFork 服务端数据。',
+        clear: '清除站点数据',
+        clearHint: '清除 NarraFork 的缓存、Service Worker、本地存储与 Cookie，会退出登录。需要服务正在运行。',
+        clearDone: '已清除，重新打开 NarraFork 即可。',
+        reset: '重置内置浏览器',
+        resetHint: '删除整个内置浏览器数据目录（含权限与所有 Cookie），在下次启动启动器时执行。',
+        resetConfirm: '下次启动启动器时会删除内置浏览器的全部数据，确定吗？',
+        resetOk: '重置',
+        resetScheduled: '已安排，重新启动启动器后生效。',
+      },
+      saved: '已保存',
+    },
+  },
+};

@@ -185,7 +185,7 @@ export const TitleBar = () => (
 2. 暴露**调用方友好**的 Promise 方法签名。
 
 ```ts
-import { Service as GreetServiceBinding } from '@bindings/foundation/internal/services/greet';
+import { Service as GreetServiceBinding } from '@bindings/narrafork-launcher/internal/services/greet';
 
 export const GreetService = {
   greet(name: string): Promise<string> {
@@ -265,7 +265,7 @@ import { GreetService } from '../../../services/greet/GreetService';
 
 ```tsx
 // HomePage.tsx
-import { Service } from '@bindings/foundation/...';
+import { Service } from '@bindings/narrafork-launcher/...';
 const onClick = () => Service.Greet(name).then(setResult);
 ```
 

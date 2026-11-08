@@ -39,7 +39,7 @@ const (
 
 // AppDirName 应与 internal/storage.AppDirName 保持一致；这里独立常量
 // 避免 cryptox → storage 的反向依赖。改业务名时同步两处。
-const AppDirName = "Foundation"
+const AppDirName = "NarraForkLauncher"
 
 // MasterKeyFileName 主密钥文件；与数据库默认目录平级。
 const MasterKeyFileName = ".master.key"
@@ -89,7 +89,7 @@ func loadOrCreateKey() ([]byte, error) {
 
 func masterKeyDir() (string, error) {
 	// 与 storage.DataDirEnv 一致：设置后主密钥放在该目录（E2E / 便携版隔离）
-	if v := os.Getenv("FOUNDATION_DATA_DIR"); v != "" {
+	if v := os.Getenv("NARRAFORK_LAUNCHER_DATA_DIR"); v != "" {
 		return v, nil
 	}
 	switch runtime.GOOS {

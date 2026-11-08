@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"foundation/internal/utils/filex"
+	"narrafork-launcher/internal/utils/filex"
 )
 
 // Config 是 storage.json 的形状。当前只有数据路径一项；将来若加"备份策略"

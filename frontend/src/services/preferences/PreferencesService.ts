@@ -2,7 +2,7 @@
 //
 // 后端单条记录 { key, value: JSON-string }。前端把任意 JS 值序列化后传入，
 // 读取时 JSON.parse —— 业务方完全不需要关心持久化。
-import { Service as Binding } from '@bindings/foundation/internal/services/preferences';
+import { Service as Binding } from '@bindings/narrafork-launcher/internal/services/preferences';
 
 export const PreferencesService = {
   // 读单个键；缺失返回 undefined（区别于"显式存了 null"）。

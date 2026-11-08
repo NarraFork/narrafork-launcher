@@ -21,8 +21,8 @@
 .dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
-  background-color: var(--fd-success);
+  border-radius: 2px;
+  background-color: var(--fd-text-muted);
 }
 
 .statusText {
@@ -36,4 +36,21 @@
   line-height: 1.5;
   color: var(--fd-text-muted);
   margin-top: 4px;
+}
+
+.dot[data-state='running'] {
+  background-color: var(--fd-success);
+}
+.dot[data-state='starting'],
+.dot[data-state='stopping'] {
+  background-color: var(--fd-warning);
+}
+.dot[data-state='error'] {
+  background-color: var(--fd-danger);
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
 }

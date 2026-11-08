@@ -2,7 +2,7 @@
 set -e
 
 # Build configuration
-APP_NAME="foundation.exe"
+APP_NAME="narrafork-launcher.exe"
 BUNDLE_ID="com.example.foundation"
 VERSION="2.0.0"
 BUILD_NUMBER="2.0.0"

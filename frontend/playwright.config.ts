@@ -3,8 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // E2E：以 Wails server 模式（-tags server，纯 HTTP，无原生窗口）运行真实后端 + 前端，
-// 由 Chromium 驱动。数据目录用 FOUNDATION_DATA_DIR 隔离，绝不触碰用户真实数据库。
-//   1) 构建：wails3 task build:server（产物 bin/foundation-server）
+// 由 Chromium 驱动。数据目录用 NARRAFORK_LAUNCHER_DATA_DIR 隔离，绝不触碰用户真实数据库。
+//   1) 构建：wails3 task build:server（产物 bin/narrafork-launcher-server）
 //   2) 运行：cd frontend && pnpm e2e
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.E2E_PORT ?? 9346);
@@ -27,10 +27,10 @@ export default defineConfig({
     channel: process.env.E2E_CHANNEL ?? 'msedge',
   },
   webServer: {
-    command: `rm -rf "${DATA_DIR}" && mkdir -p "${DATA_DIR}" && "${path.join(root, 'bin', 'foundation-server')}"`,
+    command: `rm -rf "${DATA_DIR}" && mkdir -p "${DATA_DIR}" && "${path.join(root, 'bin', 'narrafork-launcher-server')}"`,
     url: `http://127.0.0.1:${PORT}`,
     reuseExistingServer: false,
-    env: { WAILS_SERVER_PORT: String(PORT), FOUNDATION_DATA_DIR: DATA_DIR },
+    env: { WAILS_SERVER_PORT: String(PORT), NARRAFORK_LAUNCHER_DATA_DIR: DATA_DIR },
     stdout: 'ignore',
     stderr: 'pipe',
   },

@@ -81,6 +81,34 @@
   user-select: text;
 }
 
+.errorBox {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--fd-danger);
+  border-radius: 6px;
+}
+
+.errorHint {
+  font-size: 12px;
+  color: var(--fd-text-secondary);
+  line-height: 1.5;
+}
+
+.errorDetail {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  color: var(--fd-text-muted);
+  word-break: break-all;
+  user-select: text;
+}
+
+.progressMeta {
+  font-size: 12px;
+  color: var(--fd-text-muted);
+}
+
 .progress {
   display: flex;
   flex-direction: column;

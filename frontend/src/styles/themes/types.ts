@@ -26,6 +26,34 @@ export interface FoundationPalette {
     success: string;
     warning: string;
   };
+  // 终端（控制台）配色，编译为 --fd-term-*。可选：缺省时按 mode 回落到 presets/terminal.ts
+  // 的浅色 / 深色默认终端（用户自定义主题存的是 JSON，不带这一组）。
+  terminal?: TerminalPalette;
+}
+
+// 终端调色板：背景 / 前景 / 次要文字 / 选区 + ANSI 16 色（SGR 30–37 / 90–97 / 40–47 / 100–107）。
+// 每种颜色都必须在 background 上清晰可读（浅色方案里 white / brightWhite 也要是可读的灰）。
+export interface TerminalPalette {
+  background: string;
+  foreground: string;
+  muted: string;
+  selection: string;
+  black: string;
+  red: string;
+  green: string;
+  yellow: string;
+  blue: string;
+  magenta: string;
+  cyan: string;
+  white: string;
+  brightBlack: string;
+  brightRed: string;
+  brightGreen: string;
+  brightYellow: string;
+  brightBlue: string;
+  brightMagenta: string;
+  brightCyan: string;
+  brightWhite: string;
 }
 
 // 主题预设：注册到 themeRegistry，可在运行时切换。

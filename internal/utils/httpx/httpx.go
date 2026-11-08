@@ -19,7 +19,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -58,6 +60,9 @@ func currentUA() string {
 	return userAgent
 }
 
+// UserAgent 返回应用 UA，供自行构造请求（不经 NewRequest）的调用方使用。
+func UserAgent() string { return currentUA() }
+
 // Client 返回应用共享的 *http.Client。
 //
 // 设计取舍：
@@ -83,6 +88,57 @@ func Client() *http.Client {
 		}
 	})
 	return sharedClient
+}
+
+// ClientOptions 定制专用 client（例如按用户设置走代理的下载）。
+type ClientOptions struct {
+	// Proxy 为 nil 时直连，不读取 HTTP(S)_PROXY 环境变量。
+	Proxy func(*http.Request) (*url.URL, error)
+	// DialTimeout 是建立 TCP 连接与 TLS 握手各自的超时；<=0 取 15s。
+	DialTimeout time.Duration
+	// ResponseHeaderTimeout 是发出请求后等待响应头的超时；<=0 取 60s。
+	ResponseHeaderTimeout time.Duration
+	// NoRedirect 为 true 时不跟随重定向，直接返回 3xx 响应（连通性探测用）。
+	NoRedirect bool
+}
+
+// NewClient 创建独立连接池的 client。调用方应缓存复用返回值，不要每个请求新建。
+// 与 Client() 一样不设整体超时：大文件下载的时长由调用方的 context 控制。
+func NewClient(opts ClientOptions) *http.Client {
+	var tr *http.Transport
+	if base, ok := http.DefaultTransport.(*http.Transport); ok {
+		tr = base.Clone()
+	} else {
+		tr = &http.Transport{}
+	}
+	dial := opts.DialTimeout
+	if dial <= 0 {
+		dial = 15 * time.Second
+	}
+	header := opts.ResponseHeaderTimeout
+	if header <= 0 {
+		header = 60 * time.Second
+	}
+	tr.Proxy = opts.Proxy
+	tr.DialContext = (&net.Dialer{Timeout: dial, KeepAlive: 30 * time.Second}).DialContext
+	tr.TLSHandshakeTimeout = dial
+	tr.ResponseHeaderTimeout = header
+	tr.MaxIdleConnsPerHost = 4
+	tr.IdleConnTimeout = 90 * time.Second
+	c := &http.Client{Transport: tr}
+	if opts.NoRedirect {
+		c.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	}
+	return c
+}
+
+// DoWith 用指定 client 发送请求。调用方负责 resp.Body.Close()。
+func DoWith(c *http.Client, req *http.Request) (*http.Response, error) {
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("httpx: do request: %w", err)
+	}
+	return resp, nil
 }
 
 // NewRequest 构造带默认 UA 的请求。url 必填，method 默认 GET，body 允许 nil。

@@ -9,6 +9,7 @@ export interface Preferences {
   navCollapsed: boolean;   // 展开侧栏（variant: 'sidebar'）是否折叠为图标栏
   floatDockSide: string;   // 悬浮 Dock 吸附的边：'left' | 'right'
   floatDockY: number;      // 悬浮 Dock 中心的垂直位置（占内容区高度的比例 0–1，窗口缩放后仍成立）
+  'console.terminalScheme': string; // 控制台终端配色：'auto'（跟随主题）| 'light' | 'dark'
 }
 
 export interface PreferencesContextValue {
@@ -26,4 +27,5 @@ export const DEFAULT_PREFERENCES: Preferences = {
   navCollapsed: false,
   floatDockSide: 'right',
   floatDockY: 0.5,
+  'console.terminalScheme': 'auto',
 };

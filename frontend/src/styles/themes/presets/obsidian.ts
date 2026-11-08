@@ -1,4 +1,5 @@
 import type { FoundationThemePreset } from '../types';
+import { TERMINAL_DARK } from './terminal';
 
 // 黑曜：纯黑画布 + 紫罗兰强调，对比度高于普通暗色，适合长时间工作。
 // 与 dark 预设语义槽位完全一致，仅替换颜色值。
@@ -29,5 +30,6 @@ export const obsidianPreset: FoundationThemePreset = {
       success: '#4ade80',
       warning: '#fbbf24',
     },
+    terminal: TERMINAL_DARK,
   },
 };

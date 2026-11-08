@@ -1,4 +1,4 @@
-import { IconPackage, IconRefresh, IconSettings, IconTerminal2 } from '@tabler/icons-react';
+import { IconDatabase, IconPackage, IconRefresh, IconSettings, IconTerminal2 } from '@tabler/icons-react';
 import { lazy } from 'react';
 import { ConsolePage } from '@/pages/ConsolePage/ConsolePage';
 import { SettingsPageSkeleton } from '@/pages/SettingsPage/SettingsPage.skeleton';
@@ -19,6 +19,11 @@ const VersionsPage = lazy(async () => {
 const DependenciesPage = lazy(async () => {
   const mod = await import('@/pages/DependenciesPage/DependenciesPage');
   return { default: mod.DependenciesPage };
+});
+
+const StoragePage = lazy(async () => {
+  const mod = await import('@/pages/StoragePage/StoragePage');
+  return { default: mod.StoragePage };
 });
 
 // 路由表是唯一事实源（导航条目自动从这里渲染）。
@@ -47,6 +52,14 @@ export const routes: RouteDefinition[] = [
     label: 'Dependencies',
     icon: IconPackage,
     element: <DependenciesPage />,
+    slot: 'primary',
+  },
+  {
+    id: 'storage',
+    labelKey: 'route.storage',
+    label: 'Storage',
+    icon: IconDatabase,
+    element: <StoragePage />,
     slot: 'primary',
   },
   {

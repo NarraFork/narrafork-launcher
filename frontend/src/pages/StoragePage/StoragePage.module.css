@@ -1,0 +1,335 @@
+.root {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--fd-bg-content);
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  padding: 20px;
+  background-color: var(--fd-bg-surface);
+  border: 1px solid var(--fd-divider);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fd-text-primary);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--fd-text-muted);
+}
+
+.warn {
+  font-size: 12px;
+  color: var(--fd-warning);
+}
+
+.label {
+  font-size: 12px;
+  color: var(--fd-text-muted);
+}
+
+.value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fd-text-primary);
+}
+
+.bigValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--fd-text-primary);
+}
+
+.path {
+  font-size: 13px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  color: var(--fd-text-primary);
+  word-break: break-all;
+  user-select: text;
+}
+
+.pathSmall {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  color: var(--fd-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+}
+
+.dirRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.runningBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--fd-warning);
+  border-radius: 8px;
+  background-color: var(--fd-bg-surface);
+}
+
+.runningIcon {
+  flex-shrink: 0;
+  color: var(--fd-warning);
+}
+
+.runningText {
+  font-size: 13px;
+  color: var(--fd-text-primary);
+}
+
+/* —— 占用统计 —— */
+
+.summary {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.chartHost {
+  width: 180px;
+  height: 180px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chartEmpty {
+  width: 180px;
+  height: 180px;
+  border-radius: 8px;
+  border: 1px dashed var(--fd-divider);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--fd-text-muted);
+}
+
+.stats {
+  flex: 1;
+  min-width: 220px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+.legend {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 4px 16px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legendLabel {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--fd-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legendValue {
+  font-size: 12px;
+  color: var(--fd-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* —— 分类列表 —— */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--fd-divider);
+  border-radius: 6px;
+}
+
+.row[data-risk='danger'] {
+  border-left: 3px solid var(--fd-danger);
+}
+
+.rowSwatch {
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  background-color: var(--fd-bg-elevated);
+}
+
+.rowMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rowTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.rowLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fd-text-primary);
+}
+
+.rowDesc {
+  font-size: 12px;
+  color: var(--fd-text-secondary);
+}
+
+.rowMeta {
+  font-size: 12px;
+  color: var(--fd-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rowPaths {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  color: var(--fd-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.risk {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+}
+
+.risk[data-risk='safe'] {
+  color: var(--fd-success);
+}
+
+.risk[data-risk='caution'] {
+  color: var(--fd-warning);
+}
+
+.risk[data-risk='danger'] {
+  color: var(--fd-danger);
+}
+
+.tag {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background-color: var(--fd-bg-elevated);
+  color: var(--fd-text-muted);
+}
+
+.deleteButton[data-risk='danger']:not(:disabled) {
+  color: var(--fd-danger);
+  border-color: var(--fd-danger);
+}
+
+.locked {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  color: var(--fd-text-muted);
+}
+
+.status {
+  font-size: 13px;
+  color: var(--fd-text-secondary);
+}
+
+.ok {
+  font-size: 13px;
+  color: var(--fd-success);
+}
+
+.error {
+  font-size: 13px;
+  color: var(--fd-danger);
+  user-select: text;
+}

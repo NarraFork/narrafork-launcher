@@ -49,15 +49,18 @@ export const hydrateCustomTheme = (data: StoredCustomTheme): FoundationThemePres
 };
 
 // 从某个已有预设派生一份初始 palette；用户首次进入"自定义"时调用。
-// 拷贝避免改动用户当前看到的内置预设。
+// 拷贝避免改动用户当前看到的内置预设。终端配色（terminal）不拷贝：
+// 自定义主题的控制台按其 mode 取默认浅色 / 深色终端，切换 mode 时随之切换。
 export const seedFromPreset = (sourceName?: string): StoredCustomTheme => {
   const source =
     sourceName && themeRegistry.has(sourceName)
       ? themeRegistry.get(sourceName)
       : lightPreset;
+  const palette = clonePalette(source.palette);
+  delete palette.terminal;
   return {
     mode: source.mode,
-    palette: clonePalette(source.palette),
+    palette,
   };
 };
 

@@ -93,6 +93,8 @@
   user-select: text;
 }
 
+/* —— 终端容器：8px 圆角卡片，工具栏跟随应用主题，输出区用终端配色 —— */
+
 .terminalWrap {
   flex: 1;
   min-height: 0;
@@ -102,13 +104,15 @@
   border: 1px solid var(--fd-divider);
   border-radius: 8px;
   overflow: hidden;
-  background-color: var(--fd-bg-base);
+  background-color: var(--fd-bg-sidebar);
 }
 
 .terminalToolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   padding: 4px 8px 4px 12px;
   border-bottom: 1px solid var(--fd-divider);
   background-color: var(--fd-bg-sidebar);
@@ -122,9 +126,34 @@
 
 .toolbarActions {
   display: flex;
+  align-items: center;
   gap: 4px;
 }
 
+/* 终端配色切换（SegmentedControl）：轨道 / 指示块 / 文字全部取应用主题色 */
+.schemeControl {
+  --sc-color: var(--fd-bg-active);
+  padding: 2px;
+  margin-right: 4px;
+  background-color: var(--fd-bg-elevated);
+}
+
+.schemeLabel {
+  color: var(--fd-text-secondary);
+}
+.schemeLabel:hover,
+.schemeLabel[data-active] {
+  color: var(--fd-text-primary);
+}
+
+.schemeOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 输出区。--fd-term-* 默认跟随主题（buildMantineTheme 注入）；
+   data-term-scheme 为 light / dark 时把整组变量重映射到固定的浅色 / 深色终端。 */
 .terminal {
   flex: 1;
   min-height: 0;
@@ -133,43 +162,199 @@
   font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, Consolas, monospace;
   font-size: 12px;
   line-height: 1.6;
-  color: var(--fd-text-primary);
+  background-color: var(--fd-term-background);
+  color: var(--fd-term-foreground);
   user-select: text;
+  cursor: text;
 }
 
-.line {
-  white-space: pre-wrap;
-  word-break: break-all;
+.terminal[data-term-scheme='light'] {
+  --fd-term-background: var(--fd-term-light-background);
+  --fd-term-foreground: var(--fd-term-light-foreground);
+  --fd-term-muted: var(--fd-term-light-muted);
+  --fd-term-selection: var(--fd-term-light-selection);
+  --fd-term-black: var(--fd-term-light-black);
+  --fd-term-red: var(--fd-term-light-red);
+  --fd-term-green: var(--fd-term-light-green);
+  --fd-term-yellow: var(--fd-term-light-yellow);
+  --fd-term-blue: var(--fd-term-light-blue);
+  --fd-term-magenta: var(--fd-term-light-magenta);
+  --fd-term-cyan: var(--fd-term-light-cyan);
+  --fd-term-white: var(--fd-term-light-white);
+  --fd-term-bright-black: var(--fd-term-light-bright-black);
+  --fd-term-bright-red: var(--fd-term-light-bright-red);
+  --fd-term-bright-green: var(--fd-term-light-bright-green);
+  --fd-term-bright-yellow: var(--fd-term-light-bright-yellow);
+  --fd-term-bright-blue: var(--fd-term-light-bright-blue);
+  --fd-term-bright-magenta: var(--fd-term-light-bright-magenta);
+  --fd-term-bright-cyan: var(--fd-term-light-bright-cyan);
+  --fd-term-bright-white: var(--fd-term-light-bright-white);
+}
+
+.terminal[data-term-scheme='dark'] {
+  --fd-term-background: var(--fd-term-dark-background);
+  --fd-term-foreground: var(--fd-term-dark-foreground);
+  --fd-term-muted: var(--fd-term-dark-muted);
+  --fd-term-selection: var(--fd-term-dark-selection);
+  --fd-term-black: var(--fd-term-dark-black);
+  --fd-term-red: var(--fd-term-dark-red);
+  --fd-term-green: var(--fd-term-dark-green);
+  --fd-term-yellow: var(--fd-term-dark-yellow);
+  --fd-term-blue: var(--fd-term-dark-blue);
+  --fd-term-magenta: var(--fd-term-dark-magenta);
+  --fd-term-cyan: var(--fd-term-dark-cyan);
+  --fd-term-white: var(--fd-term-dark-white);
+  --fd-term-bright-black: var(--fd-term-dark-bright-black);
+  --fd-term-bright-red: var(--fd-term-dark-bright-red);
+  --fd-term-bright-green: var(--fd-term-dark-bright-green);
+  --fd-term-bright-yellow: var(--fd-term-dark-bright-yellow);
+  --fd-term-bright-blue: var(--fd-term-dark-bright-blue);
+  --fd-term-bright-magenta: var(--fd-term-dark-bright-magenta);
+  --fd-term-bright-cyan: var(--fd-term-dark-bright-cyan);
+  --fd-term-bright-white: var(--fd-term-dark-bright-white);
+}
+
+.terminal ::selection {
+  background-color: var(--fd-term-selection);
+}
+
+/* 全局滚动条取 --fd-divider，在与主题明暗相反的终端上看不见，这里按终端前景色重设 */
+.terminal::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--fd-term-foreground) 24%, transparent);
 }
 
 .empty {
   font-size: 12px;
-  color: var(--fd-text-muted);
+  color: var(--fd-term-muted);
 }
 
-.tone_default {
-  color: var(--fd-text-primary);
-}
-.tone_muted {
-  color: var(--fd-text-muted);
-}
-.tone_danger {
-  color: var(--fd-danger);
-}
-.tone_success {
-  color: var(--fd-success);
-}
-.tone_warning {
-  color: var(--fd-warning);
-}
-.tone_accent,
-.tone_info {
-  color: var(--fd-accent);
+/* —— 行 —— */
+
+.line {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
-[data-bold] {
+/* 空行保留一行高度（伪元素不参与选择 / 复制） */
+.line:empty::before {
+  content: ' ';
+}
+
+/* 非 JSON 的 stderr：整行偏红（ANSI 显式前景色仍优先） */
+.line[data-kind='stderr'] {
+  color: var(--fd-term-red);
+}
+
+/* 启动器提示：蓝色淡底条 + 小箭头标记，醒目但不刺眼 */
+.line[data-kind='system'] {
+  margin: 2px -6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  color: var(--fd-term-blue);
+  background-color: color-mix(in srgb, var(--fd-term-blue) 10%, transparent);
+}
+
+.systemMarker {
+  margin-right: 6px;
+  vertical-align: -1px;
+}
+
+/* —— JSON 日志：时间 / 级别标签 / 消息 / 附加字段 —— */
+
+.time {
+  color: var(--fd-term-muted);
+}
+
+.level {
+  color: var(--fd-term-green);
+}
+.line[data-level='debug'] .level {
+  color: var(--fd-term-muted);
+}
+.line[data-level='warn'] .level,
+.line[data-level='warn'] .msg {
+  color: var(--fd-term-yellow);
+}
+.line[data-level='error'] .level,
+.line[data-level='error'] .msg {
+  color: var(--fd-term-red);
+}
+
+.msg {
+  color: var(--fd-term-foreground);
+}
+
+/* 附加字段比消息淡一级：键偏青灰，值为减淡的前景色，两者可区分 */
+.key {
+  color: color-mix(in srgb, var(--fd-term-cyan) 55%, var(--fd-term-muted));
+}
+.value {
+  color: color-mix(in srgb, var(--fd-term-foreground) 62%, var(--fd-term-muted));
+}
+
+/* —— SGR 文字属性 —— */
+
+.terminal [data-bold] {
   font-weight: 700;
 }
-[data-dim] {
-  opacity: 0.6;
+.terminal [data-dim] {
+  opacity: 0.65;
 }
+.terminal [data-italic] {
+  font-style: italic;
+}
+.terminal [data-underline] {
+  text-decoration-line: underline;
+}
+.terminal [data-underline='double'] {
+  text-decoration-style: double;
+}
+.terminal [data-underline='curly'] {
+  text-decoration-style: wavy;
+}
+.terminal [data-strike] {
+  text-decoration-line: line-through;
+}
+.terminal [data-underline][data-strike] {
+  text-decoration-line: underline line-through;
+}
+
+/* —— ANSI 16 色（前景 fg_n / 背景 bg_n），fg / bg 为反显时的默认前景 / 背景 —— */
+
+.fg_0 { color: var(--fd-term-black); }
+.fg_1 { color: var(--fd-term-red); }
+.fg_2 { color: var(--fd-term-green); }
+.fg_3 { color: var(--fd-term-yellow); }
+.fg_4 { color: var(--fd-term-blue); }
+.fg_5 { color: var(--fd-term-magenta); }
+.fg_6 { color: var(--fd-term-cyan); }
+.fg_7 { color: var(--fd-term-white); }
+.fg_8 { color: var(--fd-term-bright-black); }
+.fg_9 { color: var(--fd-term-bright-red); }
+.fg_10 { color: var(--fd-term-bright-green); }
+.fg_11 { color: var(--fd-term-bright-yellow); }
+.fg_12 { color: var(--fd-term-bright-blue); }
+.fg_13 { color: var(--fd-term-bright-magenta); }
+.fg_14 { color: var(--fd-term-bright-cyan); }
+.fg_15 { color: var(--fd-term-bright-white); }
+.fg_fg { color: var(--fd-term-foreground); }
+.fg_bg { color: var(--fd-term-background); }
+
+.bg_0 { background-color: var(--fd-term-black); }
+.bg_1 { background-color: var(--fd-term-red); }
+.bg_2 { background-color: var(--fd-term-green); }
+.bg_3 { background-color: var(--fd-term-yellow); }
+.bg_4 { background-color: var(--fd-term-blue); }
+.bg_5 { background-color: var(--fd-term-magenta); }
+.bg_6 { background-color: var(--fd-term-cyan); }
+.bg_7 { background-color: var(--fd-term-white); }
+.bg_8 { background-color: var(--fd-term-bright-black); }
+.bg_9 { background-color: var(--fd-term-bright-red); }
+.bg_10 { background-color: var(--fd-term-bright-green); }
+.bg_11 { background-color: var(--fd-term-bright-yellow); }
+.bg_12 { background-color: var(--fd-term-bright-blue); }
+.bg_13 { background-color: var(--fd-term-bright-magenta); }
+.bg_14 { background-color: var(--fd-term-bright-cyan); }
+.bg_15 { background-color: var(--fd-term-bright-white); }
+.bg_fg { background-color: var(--fd-term-foreground); }
+.bg_bg { background-color: var(--fd-term-background); }

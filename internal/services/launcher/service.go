@@ -11,9 +11,11 @@ package launcher
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -70,11 +72,16 @@ type Service struct {
 	preparing bool
 	logs      *logBuffer
 	inline    *application.WebviewWindow
+	net       *netManager
+	// memConfig 是没有 preferences（单元测试 / E2E）时的内存配置。
+	memConfig *Config
 
 	// onConfig 在配置保存后调用（app 层据此同步托盘等）。
 	onConfig func(Config)
 	// openWhenReady 为 true 时，本轮启动就绪后按配置打开 NarraFork。
 	openWhenReady bool
+	// extraEnv 返回启动 NarraFork 时追加的环境变量（后者覆盖继承的同名变量）。
+	extraEnv func() []string
 }
 
 // New 创建服务。dataDir 为启动器数据根目录（下载的二进制放在其下 bin/）。
@@ -86,6 +93,10 @@ func New(prefs *preferences.Service, dataDir string) *Service {
 		state:   StateStopped,
 		logs:    newLogBuffer(maxLogLines),
 	}
+	s.net = newNetManager(func(msg string) {
+		s.log.Info(msg)
+		s.logs.add("system", msg)
+	})
 	return s
 }
 
@@ -97,9 +108,18 @@ func Attach(s *Service, app *application.App, mainWindow application.Window, onC
 	s.logs.emit = func(lines []LogLine) { app.Event.Emit(events.LauncherLog, lines) }
 }
 
+// SetExtraEnv 设置启动 NarraFork 时追加的环境变量来源（如 narrastore 的 NARRAFORK_HOME）。
+// 写成包级函数，避免被 Wails 生成为前端方法。
+func SetExtraEnv(s *Service, fn func() []string) {
+	s.mu.Lock()
+	s.extraEnv = fn
+	s.mu.Unlock()
+}
+
 // ServiceStartup 由 Wails 在应用启动时调用：按配置自动下载 / 更新并启动。
 func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	cfg := s.loadConfig(ctx)
+	s.net.sync(cfg)
 	if cfg.AutoStart {
 		go s.prepareAndStart(cfg, cfg.OpenOnReady)
 	} else if cfg.AutoUpdate && cfg.BinaryPath == "" {
@@ -175,6 +195,33 @@ func (s *Service) ClearLogs() { s.logs.clear() }
 // DataDir 返回下载目录，供界面展示。
 func (s *Service) DataDir() string { return s.binDir() }
 
+// GetNetworkStatus 返回下载源 / 代理的配置与本次会话实际使用的源。
+func (s *Service) GetNetworkStatus(ctx context.Context) NetworkStatus {
+	return s.net.status(s.loadConfig(ctx))
+}
+
+// TestNetwork 测试 GitHub 直连、镜像与当前下载代理的连通性（结果逐项返回，不抛错）。
+func (s *Service) TestNetwork(ctx context.Context) []NetworkTestResult {
+	cfg := s.loadConfig(ctx)
+	res := s.net.test(ctx, cfg)
+	parts := make([]string, 0, len(res))
+	for _, r := range res {
+		switch {
+		case r.Skipped:
+			parts = append(parts, r.ID+"=skipped")
+		case r.OK:
+			parts = append(parts, fmt.Sprintf("%s=ok %dms", r.ID, r.LatencyMs))
+		default:
+			parts = append(parts, fmt.Sprintf("%s=%s", r.ID, r.ErrorKind))
+		}
+	}
+	s.logs.add("system", "Network test: "+strings.Join(parts, ", "))
+	return res
+}
+
+// updateCheckTimeout：启动前检查更新的总时限（auto 模式可能先等 GitHub 超时再换镜像）。
+const updateCheckTimeout = 60 * time.Second
+
 // prepareAndStart：（按需）检查更新 → 下载 → 启动。供自动启动与界面的"启动"按钮共用。
 func (s *Service) prepareAndStart(cfg Config, openOnReady bool) {
 	s.mu.Lock()
@@ -195,15 +242,17 @@ func (s *Service) prepareAndStart(cfg Config, openOnReady bool) {
 	if cfg.BinaryPath == "" {
 		inst, _ := s.readInstalled()
 		if inst == nil || cfg.AutoUpdate {
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), updateCheckTimeout)
 			check, err := s.CheckUpdate(ctx)
 			cancel()
 			switch {
 			case err != nil && inst == nil:
+				s.logs.add("system", "Update check failed: "+err.Error())
 				s.setState(StateError, "download: "+err.Error())
 				return
 			case err != nil:
 				s.log.Warn("update check failed; starting installed version", "err", err)
+				s.logs.add("system", "Update check failed; starting the installed version: "+err.Error())
 			case check.Available && check.Latest != nil:
 				if _, err := s.download(check.Latest); err != nil && inst == nil {
 					s.setState(StateError, "download: "+err.Error())
@@ -219,7 +268,7 @@ func (s *Service) prepareAndStart(cfg Config, openOnReady bool) {
 
 // backgroundUpdate 只下载不启动（未开启自动启动但开启了自动更新）。
 func (s *Service) backgroundUpdate() {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), updateCheckTimeout)
 	check, err := s.CheckUpdate(ctx)
 	cancel()
 	if err != nil || !check.Available || check.Latest == nil {

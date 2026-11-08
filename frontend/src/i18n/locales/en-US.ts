@@ -35,6 +35,7 @@ export const enUS: Locale = {
       console: 'Console',
       versions: 'Versions',
       dependencies: 'Dependencies',
+      storage: 'Storage',
       settings: 'Settings',
     },
     common: {

@@ -25,5 +25,11 @@ export const consolePageZhCN: Messages = {
     clear: '清空输出',
     jumpToEnd: '跳到最新',
     empty: 'NarraFork 运行后输出会显示在这里…',
+    terminalScheme: {
+      label: '终端配色',
+      auto: '跟随主题',
+      light: '浅色',
+      dark: '深色',
+    },
   },
 };

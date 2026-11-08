@@ -1,4 +1,5 @@
 import type { FoundationThemePreset } from '../types';
+import { TERMINAL_LIGHT } from './terminal';
 
 // 明亮主题：偏纯白画布 + 可见的按钮底色。
 // 设计目标：
@@ -33,5 +34,6 @@ export const lightPreset: FoundationThemePreset = {
       success: '#16a34a',
       warning: '#d97706',
     },
+    terminal: TERMINAL_LIGHT,
   },
 };

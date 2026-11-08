@@ -1,8 +1,9 @@
 import { Badge, Button, Progress, Text } from '@mantine/core';
 import { IconDownload, IconExternalLink, IconFolderOpen, IconRefresh, IconX } from '@tabler/icons-react';
 import { useT } from '@/i18n';
+import type { ActiveSource } from '@/services/launcher';
 import { formatBytes } from '@/shared/format';
-import { useVersionsPage } from './useVersionsPage';
+import { useVersionsPage, type ReadableError } from './useVersionsPage';
 import classes from './VersionsPage.module.css';
 
 // 版本：当前 / 最新版本、下载进度、可下载版本列表（对应旧启动器的"更新"页）。
@@ -11,6 +12,42 @@ export const VersionsPage = () => {
   const vm = useVersionsPage();
   const latest = vm.check?.latest ?? null;
   const pendingRestart = vm.running && vm.runningVersion && vm.installed && vm.runningVersion !== vm.installed;
+
+  const sourceName = (src: ActiveSource, host = '') =>
+    src === 'mirror'
+      ? t('versions.source.mirror', { host: host || vm.mirrorHost })
+      : src === 'github'
+        ? t('versions.source.github')
+        : t('versions.source.unknown');
+
+  const renderError = (err: ReadableError) => (
+    <div className={classes.errorBox}>
+      <Text className={classes.error}>
+        {err.opKey ? t(err.opKey) : t('versions.errors.generic')}
+        {err.source && ` · ${sourceName(err.source, err.host)}`}
+        {err.kindKey && ` · ${t(err.kindKey)}`}
+      </Text>
+      {err.kindKey && <Text className={classes.errorHint}>{t(`${err.kindKey}Hint`)}</Text>}
+      <Text className={classes.errorDetail}>{err.message}</Text>
+    </div>
+  );
+
+  const progressLabel = () => {
+    const p = vm.progress!;
+    if (p.phase === 'verifying') return t('versions.verifying');
+    if (p.phase === 'retrying') {
+      return t('versions.retrying', {
+        attempt: p.attempt,
+        reason: p.errorKind ? t(`versions.errors.kinds.${p.errorKind}`) : p.error,
+      });
+    }
+    return t('versions.downloading', {
+      version: p.version,
+      received: formatBytes(p.received),
+      total: formatBytes(p.total),
+      speed: formatBytes(p.bytesPerSec),
+    });
+  };
 
   return (
     <div className={classes.root}>
@@ -48,28 +85,43 @@ export const VersionsPage = () => {
               <Text className={classes.label}>{t('versions.summary.platform')}</Text>
               <Text className={classes.value}>{vm.check?.platform ?? '—'}</Text>
             </div>
+            <div>
+              <Text className={classes.label}>{t('versions.summary.source')}</Text>
+              <Text className={classes.value}>
+                {vm.check?.source ? sourceName(vm.check.source) : '—'}
+                {vm.check?.cached && (
+                  <Badge size="xs" variant="outline" ml={6}>
+                    {t('versions.summary.cached')}
+                  </Badge>
+                )}
+              </Text>
+            </div>
           </div>
+          {vm.network && (
+            <Text className={classes.hint}>
+              {t(`versions.summary.mode.${vm.network.downloadSource}`)}
+              {vm.activeSource && ` · ${t('versions.summary.next', { source: sourceName(vm.activeSource) })}`}
+              {vm.network.proxy && ` · ${t('versions.summary.proxy', { proxy: vm.network.proxy })}`}
+            </Text>
+          )}
 
-          {vm.checkError && <Text className={classes.error}>{vm.checkError}</Text>}
+          {vm.checkError && renderError(vm.checkError)}
 
           {vm.downloading && vm.progress ? (
             <div className={classes.progress}>
               <div className={classes.progressRow}>
-                <Text className={classes.progressText}>
-                  {vm.progress.phase === 'verifying'
-                    ? t('versions.verifying')
-                    : t('versions.downloading', {
-                        version: vm.progress.version,
-                        received: formatBytes(vm.progress.received),
-                        total: formatBytes(vm.progress.total),
-                        speed: formatBytes(vm.progress.bytesPerSec),
-                      })}
-                </Text>
+                <Text className={classes.progressText}>{progressLabel()}</Text>
                 <Button size="compact-xs" variant="subtle" leftSection={<IconX size={14} stroke={1.75} />} onClick={vm.cancel}>
                   {t('versions.cancel')}
                 </Button>
               </div>
               <Progress value={vm.percent} animated={vm.progress.phase === 'downloading'} />
+              {vm.progress.source && (
+                <Text className={classes.progressMeta}>
+                  {t('versions.via', { source: sourceName(vm.progress.source, vm.progress.host) })}
+                  {vm.progress.resumed && ` · ${t('versions.resumed')}`}
+                </Text>
+              )}
             </div>
           ) : (
             <div className={classes.actions}>
@@ -89,7 +141,12 @@ export const VersionsPage = () => {
               )}
             </div>
           )}
-          {vm.downloadError && <Text className={classes.error}>{vm.downloadError}</Text>}
+          {vm.downloadError && renderError(vm.downloadError)}
+          {!vm.downloading && vm.progress?.phase === 'done' && vm.progress.source && (
+            <Text className={classes.ok}>
+              {t('versions.doneVia', { version: vm.progress.version, source: sourceName(vm.progress.source, vm.progress.host) })}
+            </Text>
+          )}
 
           <div className={classes.dirRow}>
             <Text className={classes.label}>{t('versions.dataDir')}</Text>
@@ -103,7 +160,7 @@ export const VersionsPage = () => {
         <section className={classes.card}>
           <Text className={classes.cardTitle}>{t('versions.list.title')}</Text>
           <Text className={classes.hint}>{t('versions.list.hint')}</Text>
-          {vm.releasesError && <Text className={classes.error}>{vm.releasesError}</Text>}
+          {vm.releasesError && renderError(vm.releasesError)}
           <div className={classes.list}>
             {vm.releases.map((r) => {
               const isInstalled = r.version === vm.installed;

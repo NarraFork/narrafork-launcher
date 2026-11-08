@@ -25,10 +25,11 @@ export {
   FOUNDATION_CSS_VARS,
 } from './buildMantineTheme';
 export { useFoundationPalette } from './useFoundationPalette';
-export type { FoundationPalette, FoundationThemePreset } from './types';
+export type { FoundationPalette, FoundationThemePreset, TerminalPalette } from './types';
 export { lightPreset } from './presets/light';
 export { darkPreset } from './presets/dark';
 export { obsidianPreset } from './presets/obsidian';
+export { TERMINAL_LIGHT, TERMINAL_DARK, terminalPaletteFor } from './presets/terminal';
 export {
   CUSTOM_THEME_NAME,
   CUSTOM_THEME_LABEL,

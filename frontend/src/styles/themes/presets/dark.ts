@@ -1,4 +1,5 @@
 import type { FoundationThemePreset } from '../types';
+import { TERMINAL_DARK } from './terminal';
 
 // 暗色主题：深灰画布 + 中灰面板，与默认白色主题语义槽位完全对齐。
 // 选色参考 Tailwind slate / zinc 调色板，避免纯黑导致的对比度过强。
@@ -29,5 +30,6 @@ export const darkPreset: FoundationThemePreset = {
       success: '#4ade80',
       warning: '#fbbf24',
     },
+    terminal: TERMINAL_DARK,
   },
 };

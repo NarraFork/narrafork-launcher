@@ -3,6 +3,7 @@ package launcher
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 // TestEndToEnd 下载真实的 NarraFork 稳定版、启动、等健康检查、再优雅停止。
 // NarraFork 的数据目录（~/.narrafork）被重定向到临时目录，不触碰真实数据。
 // 设置 LAUNCHER_E2E=1 时运行（会下载约 190MB）。
+// LAUNCHER_E2E_SOURCE=auto|github|mirror 指定下载源（默认 auto）。
 func TestEndToEnd(t *testing.T) {
 	if os.Getenv("LAUNCHER_E2E") != "1" {
 		t.Skip("set LAUNCHER_E2E=1")
@@ -24,21 +26,36 @@ func TestEndToEnd(t *testing.T) {
 		dataDir = t.TempDir()
 	}
 	s := New(nil, dataDir)
+	cfg := defaultConfig()
+	if src := os.Getenv("LAUNCHER_E2E_SOURCE"); src != "" {
+		cfg.DownloadSource = src
+	}
+	cfg.Port = 17979
+	cfg.Host = "127.0.0.1"
+	if _, err := s.SaveConfig(context.Background(), cfg); err != nil {
+		t.Fatal(err)
+	}
+	// 模拟 narrastore 的自定义数据目录：NARRAFORK_HOME 应经 SetExtraEnv 传给 NarraFork。
+	narraHome := t.TempDir()
+	SetExtraEnv(s, func() []string { return []string{"NARRAFORK_HOME=" + narraHome} })
 
 	if inst, _ := s.readInstalled(); inst == nil {
-		info, err := s.latestFor(context.Background(), "stable")
+		info, src, _, err := s.latestFor(context.Background(), "stable")
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("downloading v%s (%d bytes)", info.Version, info.AssetSize)
-		if _, err := s.download(info); err != nil {
+		t.Logf("downloading v%s (%d bytes); release info via %s, digest=%q", info.Version, info.AssetSize, src, info.digest)
+		inst, err := s.download(info)
+		if err != nil {
+			dumpLogs(t, s)
 			t.Fatal(err)
+		}
+		t.Logf("installed via %s, checksum basis %s", inst.Source, inst.Checksum)
+		if cfg.DownloadSource == "mirror" && inst.Source != "mirror" {
+			t.Errorf("source = %s, want mirror", inst.Source)
 		}
 	}
 
-	cfg := defaultConfig()
-	cfg.Port = 17979
-	cfg.Host = "127.0.0.1"
 	if err := s.start(cfg, false); err != nil {
 		t.Fatal(err)
 	}
@@ -59,6 +76,12 @@ func TestEndToEnd(t *testing.T) {
 	t.Logf("running pid=%d url=%s version=%s", st.PID, st.URL, st.Version)
 	if st.URL != "http://127.0.0.1:17979" {
 		t.Errorf("url = %s", st.URL)
+	}
+	if _, err := os.Stat(filepath.Join(narraHome, "narrafork.db")); err != nil {
+		t.Errorf("NARRAFORK_HOME not honoured: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".narrafork", "narrafork.db")); err == nil {
+		t.Error("database was created in the default home despite NARRAFORK_HOME")
 	}
 
 	begin := time.Now()

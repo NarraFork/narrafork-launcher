@@ -13,6 +13,7 @@ import (
 	"narrafork-launcher/internal/services/appsettings"
 	"narrafork-launcher/internal/services/exportsvc"
 	"narrafork-launcher/internal/services/launcher"
+	"narrafork-launcher/internal/services/narrastore"
 	"narrafork-launcher/internal/services/preferences"
 	"narrafork-launcher/internal/services/storagesvc"
 	"narrafork-launcher/internal/services/subprocess"
@@ -76,6 +77,16 @@ func Run(assets embed.FS, trayIcon []byte) error {
 	prefsSvc := preferences.New(holder)
 	systraySvc := NewSystrayService(prefsSvc, trayIcon)
 	launcherSvc := launcher.New(prefsSvc, dataDir)
+	// NarraFork 数据目录管理：删除前需确认 NarraFork 未运行（starting / running / stopping 都算运行中）。
+	narraStoreSvc := narrastore.New(prefsSvc, func() bool {
+		switch launcherSvc.GetStatus().State {
+		case launcher.StateStarting, launcher.StateRunning, launcher.StateStopping:
+			return true
+		}
+		return false
+	})
+	// 自定义 NarraFork 数据目录时，启动 NarraFork 带上 NARRAFORK_HOME。
+	launcher.SetExtraEnv(launcherSvc, func() []string { return narrastore.ChildEnv(narraStoreSvc) })
 
 	var mainWindow *application.WebviewWindow
 	app := application.New(application.Options{
@@ -90,6 +101,7 @@ func Run(assets embed.FS, trayIcon []byte) error {
 			application.NewService(childWinSvc),
 			application.NewService(systraySvc),
 			application.NewService(launcherSvc),
+			application.NewService(narraStoreSvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
@@ -114,6 +126,7 @@ func Run(assets embed.FS, trayIcon []byte) error {
 	})
 	subSvc.AttachApp(app)
 	childWinSvc.AttachApp(app)
+	narrastore.Attach(narraStoreSvc, app)
 
 	mainWindow = app.Window.NewWithOptions(windowOptions())
 

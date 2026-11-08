@@ -42,6 +42,7 @@ export const zhCN: Locale = {
       console: '控制台',
       versions: '版本',
       dependencies: '依赖',
+      storage: '存储',
       settings: '设置',
     },
     common: {

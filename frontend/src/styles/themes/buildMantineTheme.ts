@@ -14,7 +14,8 @@ import {
   type MantineThemeOverride,
 } from '@mantine/core';
 import classes from './mantineComponents.module.css';
-import type { FoundationPalette, FoundationThemePreset } from './types';
+import { TERMINAL_DARK, TERMINAL_LIGHT, terminalPaletteFor } from './presets/terminal';
+import type { FoundationPalette, FoundationThemePreset, TerminalPalette } from './types';
 
 // ============================================================================
 // Foundation × Mantine 主题编译
@@ -26,8 +27,17 @@ import type { FoundationPalette, FoundationThemePreset } from './types';
 //    这样 <Button> / <Switch> / <Checkbox> / 焦点环等 Mantine 原生组件自动跟随强调色。
 // 3. Mantine 自身的语义色（body / text / dimmed / border / default）全部映射到 --fd-*，
 //    保证没写样式的 Mantine 组件也和三套预设一致。
+// 4. 终端配色 → --fd-term-*（主题默认终端，缺省按 mode 回落）+ 固定的 --fd-term-light-* /
+//    --fd-term-dark-* 两套，控制台按用户选择在容器上把 --fd-term-* 重映射到其中一套，切换无需重建主题。
 
 const FONT_STACK = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+// 终端槽位 → CSS 变量后缀：camelCase 转 kebab（brightBlack → --fd-term-bright-black）
+const TERMINAL_SLOTS = Object.keys(TERMINAL_DARK) as (keyof TerminalPalette)[];
+const kebab = (key: string): string => key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+
+const terminalToCssVars = (t: TerminalPalette, prefix: string): Record<string, string> =>
+  Object.fromEntries(TERMINAL_SLOTS.map((k) => [`${prefix}-${kebab(k)}`, t[k]]));
 
 // FoundationPalette 的 CSS 变量名对照表。
 // JS 侧需要"引用而非取值"时用它（例如 @mantine/charts 的 color、内联 style）：
@@ -55,7 +65,27 @@ export const FOUNDATION_CSS_VARS = {
     success: 'var(--fd-success)',
     warning: 'var(--fd-warning)',
   },
+  // 终端配色：terminal.red → 'var(--fd-term-red)'，terminal.brightBlack → 'var(--fd-term-bright-black)' …
+  terminal: Object.fromEntries(
+    TERMINAL_SLOTS.map((k) => [k, `var(--fd-term-${kebab(k)})`]),
+  ) as Record<keyof TerminalPalette, string>,
 } as const satisfies FoundationPalette;
+
+// 主题声明了 terminal 就用它（缺字段按 mode 补齐），否则按 mode 取默认浅色 / 深色终端。
+// 自定义主题来自存储的 JSON，terminal 不是对象时整组忽略。
+const resolveTerminal = (preset: FoundationThemePreset): TerminalPalette => {
+  const custom = preset.palette.terminal;
+  return {
+    ...terminalPaletteFor(preset.mode),
+    ...(custom && typeof custom === 'object' ? custom : undefined),
+  };
+};
+
+const terminalCssVars = (preset: FoundationThemePreset): Record<string, string> => ({
+  ...terminalToCssVars(resolveTerminal(preset), '--fd-term'),
+  ...terminalToCssVars(TERMINAL_LIGHT, '--fd-term-light'),
+  ...terminalToCssVars(TERMINAL_DARK, '--fd-term-dark'),
+});
 
 const paletteToCssVars = (p: FoundationPalette): Record<string, string> => ({
   '--fd-bg-base': p.bg.base,
@@ -93,7 +123,11 @@ const mantineSemanticVars = (): Record<string, string> => ({
 export const buildCssVariablesResolver =
   (preset: FoundationThemePreset): CSSVariablesResolver =>
   () => {
-    const scheme = { ...paletteToCssVars(preset.palette), ...mantineSemanticVars() };
+    const scheme = {
+      ...paletteToCssVars(preset.palette),
+      ...terminalCssVars(preset),
+      ...mantineSemanticVars(),
+    };
     // forceColorScheme 下只会命中其中一套，两边写同样的值即可
     return { variables: {}, light: scheme, dark: scheme };
   };

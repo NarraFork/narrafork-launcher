@@ -54,3 +54,73 @@
   color: var(--fd-danger);
   user-select: text;
 }
+
+.warn {
+  font-size: 12px;
+  color: var(--fd-warning);
+  margin-top: -8px;
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--fd-divider);
+}
+
+.notice {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background-color: var(--fd-bg-elevated);
+}
+
+.noticeIcon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--fd-warning);
+}
+
+.testList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.testRow {
+  display: grid;
+  grid-template-columns: 18px minmax(160px, 220px) 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--fd-divider);
+  border-radius: 6px;
+}
+
+.testIcon {
+  color: var(--fd-text-muted);
+}
+
+.testRow[data-state='ok'] .testIcon {
+  color: var(--fd-success);
+}
+
+.testRow[data-state='fail'] .testIcon,
+.testRow[data-state='fail'] .testResult {
+  color: var(--fd-danger);
+}
+
+.testName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fd-text-primary);
+}
+
+.testResult {
+  font-size: 12px;
+  color: var(--fd-text-secondary);
+  user-select: text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -3,6 +3,7 @@ import { I18nProvider, registerFoundationLocales } from '@/i18n';
 import { registerConsolePageLocales } from '@/pages/ConsolePage/lang';
 import { registerDependenciesPageLocales } from '@/pages/DependenciesPage/lang';
 import { registerSettingsPageLocales } from '@/pages/SettingsPage/lang';
+import { registerStoragePageLocales } from '@/pages/StoragePage/lang';
 import { registerVersionsPageLocales } from '@/pages/VersionsPage/lang';
 import { PreferencesProvider } from '@/preferences';
 import { RouterProvider } from '@/router';
@@ -19,6 +20,7 @@ registerFoundationLocales();
 registerConsolePageLocales();
 registerVersionsPageLocales();
 registerDependenciesPageLocales();
+registerStoragePageLocales();
 registerSettingsPageLocales();
 
 // Provider 嵌套顺序（自外向内）：I18n → Theme → Preferences → Router

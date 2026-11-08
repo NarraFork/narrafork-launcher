@@ -2,12 +2,14 @@ package launcher
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"net/http"
 	"os"
@@ -33,10 +35,24 @@ const (
 	keepVersions = 2
 	// downloadTimeout 单次下载的总时长上限（约 190MB）。
 	downloadTimeout = 2 * time.Hour
+	// downloadAttempts：每个源最多尝试次数（首次 + 2 次续传重试）。
+	downloadAttempts = 3
+	// downloadHeaderTimeout：发出下载请求后等待响应头的上限。
+	downloadHeaderTimeout = 30 * time.Second
+)
+
+// 测试可调小。
+var (
+	// stallTimeout：下载中这么久没收到任何字节就放弃本次尝试（随后续传重试）。
+	stallTimeout = 60 * time.Second
+	// retryBackoff：第 n 次重试前等待 n × retryBackoff。
+	retryBackoff = 2 * time.Second
 )
 
 // 只认 NarraFork 主程序的 tag（v0.9.12），跳过 executor-v0.9.5 之类的辅助发布。
 var appTag = regexp.MustCompile(`^v\d+\.\d+\.\d+([-.][0-9A-Za-z.]+)?$`)
+
+var sha256Hex = regexp.MustCompile(`^[0-9a-fA-F]{64}$`)
 
 // ReleaseInfo 是给前端展示的一个可下载版本。
 type ReleaseInfo struct {
@@ -49,9 +65,11 @@ type ReleaseInfo struct {
 	HTMLURL     string `json:"htmlUrl"`
 	AssetName   string `json:"assetName"`
 	AssetSize   int64  `json:"assetSize"`
-	// assetURL / sumsURL 只在后端使用，不暴露给前端（下载必须走 Install）。
+	// assetURL / sumsURL 是 GitHub 原始地址（镜像 JSON 里也不改写），由下载源决定实际请求地址。
+	// digest 是 API 资产上的 "sha256:<hex>"。只在后端使用（下载必须走 Install）。
 	assetURL string
 	sumsURL  string
+	digest   string
 }
 
 // Installed 记录下载目录中当前使用的版本。
@@ -60,6 +78,8 @@ type Installed struct {
 	File        string `json:"file"`
 	Channel     string `json:"channel"`
 	InstalledAt string `json:"installedAt"`
+	Source      string `json:"source,omitempty"`   // 下载时使用的源："github" | "mirror"
+	Checksum    string `json:"checksum,omitempty"` // 校验依据："digest" | "sums"
 }
 
 // UpdateCheck 是检查更新的结果。
@@ -68,6 +88,8 @@ type UpdateCheck struct {
 	Latest    *ReleaseInfo `json:"latest"`
 	Available bool         `json:"available"`
 	Platform  string       `json:"platform"`
+	Source    string       `json:"source"` // 发布信息来自哪个源："github" | "mirror"
+	Cached    bool         `json:"cached"` // 是否命中 5 分钟缓存
 }
 
 // DownloadProgress 随 launcher:download 事件推送。
@@ -75,9 +97,17 @@ type DownloadProgress struct {
 	Version     string `json:"version"`
 	Received    int64  `json:"received"`
 	Total       int64  `json:"total"`
-	Phase       string `json:"phase"` // "downloading" | "verifying" | "done" | "error" | "cancelled"
+	Phase       string `json:"phase"` // "downloading" | "retrying" | "verifying" | "done" | "error" | "cancelled"
 	Error       string `json:"error"`
 	BytesPerSec int64  `json:"bytesPerSec"`
+	// Source / Host 是当前尝试使用的源与主机（如 "mirror" / "hk1.aeoliancloud.com"）。
+	Source string `json:"source"`
+	Host   string `json:"host"`
+	// Attempt 从 1 开始；Resumed 表示本次尝试从已下载的部分续传。
+	Attempt int  `json:"attempt"`
+	Resumed bool `json:"resumed"`
+	// ErrorKind 是 NetError.Kind（phase 为 error / retrying 时），供界面翻译。
+	ErrorKind string `json:"errorKind"`
 }
 
 type ghRelease struct {
@@ -95,6 +125,7 @@ type ghAsset struct {
 	Name               string `json:"name"`
 	Size               int64  `json:"size"`
 	BrowserDownloadURL string `json:"browser_download_url"`
+	Digest             string `json:"digest"` // "sha256:<hex>"，较新的 GitHub API 才有
 }
 
 // platformSuffix 返回当前平台的资产后缀，如 "windows-x64.exe" / "linux-arm64"。
@@ -126,31 +157,6 @@ func platformSuffix() (string, error) {
 	return osName + "-" + arch + ext, nil
 }
 
-func githubGet[T any](ctx context.Context, url string, out *T) error {
-	req, cancel, err := httpx.NewRequest(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-	defer cancel()
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
-	if tok := strings.TrimSpace(os.Getenv("GITHUB_TOKEN")); tok != "" {
-		req.Header.Set("Authorization", "Bearer "+tok)
-	}
-	resp, err := httpx.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode >= 400 {
-		_ = resp.Body.Close()
-		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
-			return fmt.Errorf("GitHub API rate limit reached (HTTP %d); try again later or set GITHUB_TOKEN", resp.StatusCode)
-		}
-		return fmt.Errorf("GitHub API %s: HTTP %d", url, resp.StatusCode)
-	}
-	return httpx.ReadJSONLimit(resp, 16<<20, out)
-}
-
 // toReleaseInfo 选出本平台的资产；没有对应资产返回 nil。
 func toReleaseInfo(r ghRelease) *ReleaseInfo {
 	if r.Draft || !appTag.MatchString(r.TagName) {
@@ -177,6 +183,7 @@ func toReleaseInfo(r ghRelease) *ReleaseInfo {
 			info.AssetName = a.Name
 			info.AssetSize = a.Size
 			info.assetURL = a.BrowserDownloadURL
+			info.digest = a.Digest
 		case "narrafork-" + version + "-SHA256SUMS":
 			info.sumsURL = a.BrowserDownloadURL
 		}
@@ -187,11 +194,21 @@ func toReleaseInfo(r ghRelease) *ReleaseInfo {
 	return info
 }
 
+// digestHex 取出 "sha256:<hex>" 中的摘要；格式不对返回空串。
+func digestHex(d string) string {
+	algo, hexSum, ok := strings.Cut(strings.TrimSpace(d), ":")
+	if !ok || !strings.EqualFold(algo, "sha256") || !sha256Hex.MatchString(hexSum) {
+		return ""
+	}
+	return strings.ToLower(hexSum)
+}
+
 // fetchReleases 拉最近的发布列表（含预发布），按发布时间倒序。
-func (s *Service) fetchReleases(ctx context.Context) ([]*ReleaseInfo, error) {
+func (s *Service) fetchReleases(ctx context.Context) ([]*ReleaseInfo, string, bool, error) {
 	var raw []ghRelease
-	if err := githubGet(ctx, apiBase+"/releases?per_page=30", &raw); err != nil {
-		return nil, err
+	src, cached, err := s.net.getAPI(ctx, s.loadConfig(ctx), apiBase+"/releases?per_page=30", &raw)
+	if err != nil {
+		return nil, src, false, err
 	}
 	out := make([]*ReleaseInfo, 0, len(raw))
 	for _, r := range raw {
@@ -203,35 +220,38 @@ func (s *Service) fetchReleases(ctx context.Context) ([]*ReleaseInfo, error) {
 	s.mu.Lock()
 	s.releases = out
 	s.mu.Unlock()
-	return out, nil
+	return out, src, cached, nil
 }
 
 // latestFor 返回通道内最新版本：stable 走 /releases/latest，beta 取列表中最新的一项（含预发布）。
-func (s *Service) latestFor(ctx context.Context, channel string) (*ReleaseInfo, error) {
+// 同时返回发布信息来自哪个源、是否命中缓存。
+func (s *Service) latestFor(ctx context.Context, channel string) (*ReleaseInfo, string, bool, error) {
 	if channel == "beta" {
-		list, err := s.fetchReleases(ctx)
+		list, src, cached, err := s.fetchReleases(ctx)
 		if err != nil {
-			return nil, err
+			return nil, src, false, err
 		}
 		if len(list) == 0 {
-			return nil, errors.New("no release has a binary for this platform")
+			return nil, src, cached, errors.New("no release has a binary for this platform")
 		}
-		return list[0], nil
+		return list[0], src, cached, nil
 	}
 	var r ghRelease
-	if err := githubGet(ctx, apiBase+"/releases/latest", &r); err != nil {
-		return nil, err
+	src, cached, err := s.net.getAPI(ctx, s.loadConfig(ctx), apiBase+"/releases/latest", &r)
+	if err != nil {
+		return nil, src, false, err
 	}
 	info := toReleaseInfo(r)
 	if info == nil {
-		return nil, fmt.Errorf("release %s has no binary for this platform", r.TagName)
+		return nil, src, cached, fmt.Errorf("release %s has no binary for this platform", r.TagName)
 	}
-	return info, nil
+	return info, src, cached, nil
 }
 
 // ListReleases 返回最近的可下载版本（含预发布）。
 func (s *Service) ListReleases(ctx context.Context) ([]*ReleaseInfo, error) {
-	return s.fetchReleases(ctx)
+	list, _, _, err := s.fetchReleases(ctx)
+	return list, err
 }
 
 // CheckUpdate 按配置的通道检查最新版本。
@@ -242,7 +262,8 @@ func (s *Service) CheckUpdate(ctx context.Context) (UpdateCheck, error) {
 	if inst, err := s.readInstalled(); err == nil && inst != nil {
 		res.Current = inst.Version
 	}
-	latest, err := s.latestFor(ctx, cfg.Channel)
+	latest, src, cached, err := s.latestFor(ctx, cfg.Channel)
+	res.Source, res.Cached = src, cached
 	if err != nil {
 		return res, err
 	}
@@ -336,7 +357,7 @@ func (s *Service) Install(ctx context.Context, version string) (Installed, error
 	var info *ReleaseInfo
 	var err error
 	if version == "" {
-		info, err = s.latestFor(ctx, s.loadConfig(ctx).Channel)
+		info, _, _, err = s.latestFor(ctx, s.loadConfig(ctx).Channel)
 	} else {
 		info, err = s.findRelease(ctx, version)
 	}
@@ -354,7 +375,7 @@ func (s *Service) findRelease(ctx context.Context, version string) (*ReleaseInfo
 	for _, list := range [][]*ReleaseInfo{cached, nil} {
 		if list == nil {
 			var err error
-			if list, err = s.fetchReleases(ctx); err != nil {
+			if list, _, _, err = s.fetchReleases(ctx); err != nil {
 				return nil, err
 			}
 		}
@@ -403,27 +424,40 @@ func (s *Service) download(info *ReleaseInfo) (Installed, error) {
 
 	inst, err := s.downloadTo(ctx, info)
 	if err != nil {
-		phase := "error"
-		if errors.Is(ctx.Err(), context.Canceled) {
-			phase = "cancelled"
+		p := DownloadProgress{Version: info.Version, Phase: "error", Error: err.Error(), ErrorKind: errKind(err)}
+		var ne *NetError
+		if errors.As(err, &ne) {
+			p.Source, p.Host = ne.Source, ne.Host
 		}
-		s.emitProgress(DownloadProgress{Version: info.Version, Phase: phase, Error: err.Error()})
+		if errors.Is(ctx.Err(), context.Canceled) {
+			p.Phase, p.ErrorKind = "cancelled", "cancelled"
+		}
+		s.emitProgress(p)
+		s.logs.add("system", "Download failed: "+err.Error())
 		return Installed{}, err
 	}
-	s.emitProgress(DownloadProgress{Version: info.Version, Phase: "done", Received: info.AssetSize, Total: info.AssetSize})
-	s.log.Info("NarraFork downloaded", "version", inst.Version)
+	s.emitProgress(DownloadProgress{
+		Version: info.Version, Phase: "done", Received: info.AssetSize, Total: info.AssetSize,
+		Source: inst.Source, Host: s.sourceHost(inst.Source),
+	})
+	s.log.Info("NarraFork downloaded", "version", inst.Version, "source", inst.Source, "checksum", inst.Checksum)
+	s.logs.add("system", fmt.Sprintf("Downloaded NarraFork v%s from %s (SHA-256 verified via %s)", inst.Version, describeSource(s.loadConfig(ctx), inst.Source), inst.Checksum))
 	s.emitStatus()
 	return inst, nil
 }
 
+func (s *Service) sourceHost(src string) string {
+	if src == srcMirror {
+		return hostOf(s.loadConfig(context.Background()).MirrorURL)
+	}
+	return "github.com"
+}
+
 func (s *Service) downloadTo(ctx context.Context, info *ReleaseInfo) (Installed, error) {
-	expected := ""
-	if info.sumsURL != "" {
-		sum, err := fetchChecksum(ctx, info.sumsURL, info.AssetName)
-		if err != nil {
-			return Installed{}, fmt.Errorf("read checksums: %w", err)
-		}
-		expected = sum
+	cfg := s.loadConfig(ctx)
+	expected, basis, err := s.expectedChecksum(ctx, cfg, info)
+	if err != nil {
+		return Installed{}, err
 	}
 
 	dir := filepath.Join(s.binDir(), info.Version)
@@ -433,49 +467,23 @@ func (s *Service) downloadTo(ctx context.Context, info *ReleaseInfo) (Installed,
 	final := filepath.Join(dir, info.AssetName)
 	part := final + ".part"
 
-	req, reqCancel, err := httpx.NewRequest(ctx, http.MethodGet, info.assetURL, nil)
+	var sum string
+	sources := len(s.net.order(cfg))
+	src, err := s.net.do(ctx, cfg, func(ctx context.Context, src string) error {
+		var err error
+		sum, err = s.fetchBinary(ctx, cfg, src, info, part, sources > 1)
+		return err
+	})
 	if err != nil {
 		return Installed{}, err
-	}
-	defer reqCancel()
-	resp, err := httpx.Do(req)
-	if err != nil {
-		return Installed{}, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return Installed{}, fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
-	}
-	total := resp.ContentLength
-	if total <= 0 {
-		total = info.AssetSize
 	}
 
-	f, err := os.OpenFile(part, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755)
-	if err != nil {
-		return Installed{}, err
-	}
-	hash := sha256.New()
-	pw := &progressWriter{s: s, version: info.Version, total: total, start: time.Now()}
-	_, copyErr := io.Copy(io.MultiWriter(f, hash, pw), resp.Body)
-	closeErr := f.Close()
-	if copyErr != nil || closeErr != nil {
+	s.emitProgress(DownloadProgress{Version: info.Version, Phase: "verifying", Received: info.AssetSize, Total: info.AssetSize, Source: src, Host: s.sourceHost(src)})
+	if !strings.EqualFold(sum, expected) {
 		_ = os.Remove(part)
-		if copyErr != nil {
-			return Installed{}, copyErr
-		}
-		return Installed{}, closeErr
-	}
-	if total > 0 && pw.received != total {
-		_ = os.Remove(part)
-		return Installed{}, fmt.Errorf("incomplete download: %d of %d bytes", pw.received, total)
-	}
-
-	s.emitProgress(DownloadProgress{Version: info.Version, Phase: "verifying", Received: pw.received, Total: total})
-	if expected != "" {
-		if got := hex.EncodeToString(hash.Sum(nil)); !strings.EqualFold(got, expected) {
-			_ = os.Remove(part)
-			return Installed{}, fmt.Errorf("checksum mismatch for %s", info.AssetName)
+		return Installed{}, &NetError{
+			Kind: "checksum", Op: opDownload, Source: src, Host: s.sourceHost(src),
+			Message: fmt.Sprintf("checksum mismatch for %s (expected %s, got %s); the file was discarded", info.AssetName, expected, sum),
 		}
 	}
 	_ = os.Remove(final)
@@ -491,6 +499,8 @@ func (s *Service) downloadTo(ctx context.Context, info *ReleaseInfo) (Installed,
 		File:        info.AssetName,
 		Channel:     map[bool]string{true: "beta", false: "stable"}[info.Prerelease],
 		InstalledAt: time.Now().Format(time.RFC3339),
+		Source:      src,
+		Checksum:    basis,
 	}
 	buf, _ := json.MarshalIndent(inst, "", "  ")
 	if err := filex.WriteAtomic(filepath.Join(s.binDir(), manifestFileName), buf, 0o644); err != nil {
@@ -500,29 +510,255 @@ func (s *Service) downloadTo(ctx context.Context, info *ReleaseInfo) (Installed,
 	return inst, nil
 }
 
-// fetchChecksum 从 SHA256SUMS（`<hex>  <name>` 每行一条）里取出指定文件的摘要。
-func fetchChecksum(ctx context.Context, url, name string) (string, error) {
-	req, cancel, err := httpx.NewRequest(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return "", err
+// expectedChecksum 取期望的 SHA-256：优先 API 资产上的 digest，其次同源的 SHA256SUMS。
+// 两者都拿不到时失败——不安装未经校验的文件。
+func (s *Service) expectedChecksum(ctx context.Context, cfg Config, info *ReleaseInfo) (sum, basis string, err error) {
+	if d := digestHex(info.digest); d != "" {
+		return d, "digest", nil
 	}
-	defer cancel()
-	resp, err := httpx.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return "", fmt.Errorf("HTTP %d", resp.StatusCode)
-	}
-	sc := bufio.NewScanner(io.LimitReader(resp.Body, 1<<20))
-	for sc.Scan() {
-		fields := strings.Fields(sc.Text())
-		if len(fields) == 2 && strings.TrimPrefix(fields[1], "*") == name {
-			return fields[0], nil
+	if info.sumsURL == "" {
+		return "", "", &NetError{
+			Kind: "checksum", Op: opChecksum,
+			Message: fmt.Sprintf("release v%s publishes no SHA-256 digest or SHA256SUMS for %s; refusing to install an unverified file", info.Version, info.AssetName),
 		}
 	}
-	return "", fmt.Errorf("no checksum listed for %s", name)
+	_, err = s.net.do(ctx, cfg, func(ctx context.Context, src string) error {
+		body, err := s.net.fetch(ctx, cfg, src, opChecksum, info.sumsURL, 1<<20)
+		if err != nil {
+			return err
+		}
+		v, perr := parseChecksums(body, info.AssetName)
+		if perr != nil {
+			return &NetError{Kind: "checksum", Op: opChecksum, Source: src, Host: hostOf(mirrored(cfg, src, info.sumsURL)), Message: perr.Error()}
+		}
+		sum = v
+		return nil
+	})
+	if err != nil {
+		return "", "", err
+	}
+	return sum, "sums", nil
+}
+
+// parseChecksums 从 SHA256SUMS（`<hex>  <name>` 每行一条）里取出指定文件的摘要。
+func parseChecksums(body []byte, name string) (string, error) {
+	sc := bufio.NewScanner(bytes.NewReader(body))
+	for sc.Scan() {
+		fields := strings.Fields(sc.Text())
+		if len(fields) == 2 && strings.TrimPrefix(fields[1], "*") == name && sha256Hex.MatchString(fields[0]) {
+			return strings.ToLower(fields[0]), nil
+		}
+	}
+	return "", fmt.Errorf("SHA256SUMS lists no checksum for %s; refusing to install an unverified file", name)
+}
+
+// fetchBinary 在一个源上下载到 part，最多 downloadAttempts 次：网络层失败 / 停滞后用 Range 从已下载处续传。
+// canSwitch 为 true（auto 模式还有别的源）时，连接都建不起来的失败直接交给上层换源，不在本源重试。
+// 返回整个文件的 SHA-256。
+func (s *Service) fetchBinary(ctx context.Context, cfg Config, src string, info *ReleaseInfo, part string, canSwitch bool) (string, error) {
+	target := mirrored(cfg, src, info.assetURL)
+	host := hostOf(target)
+	c, err := s.net.client(cfg, clientKey{dial: dialFor(cfg, src), header: downloadHeaderTimeout})
+	if err != nil {
+		return "", err
+	}
+	var last error
+	for attempt := 1; attempt <= downloadAttempts; attempt++ {
+		if attempt > 1 {
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(time.Duration(attempt-1) * retryBackoff):
+			}
+		}
+		sum, err := s.downloadAttempt(ctx, c, src, host, target, info, part, attempt)
+		if err == nil {
+			return sum, nil
+		}
+		last = err
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
+		kind := errKind(err)
+		if !fallbackKind(kind) {
+			return "", err
+		}
+		var ne *NetError
+		if canSwitch && errors.As(err, &ne) && ne.preResponse {
+			return "", err
+		}
+		if attempt < downloadAttempts {
+			st, _ := os.Stat(part)
+			var have int64
+			if st != nil {
+				have = st.Size()
+			}
+			s.logs.add("system", fmt.Sprintf("%s; retrying (%d/%d) from byte %d", err.Error(), attempt+1, downloadAttempts, have))
+			s.emitProgress(DownloadProgress{
+				Version: info.Version, Phase: "retrying", Received: have, Total: info.AssetSize,
+				Source: src, Host: host, Attempt: attempt + 1, Error: err.Error(), ErrorKind: kind,
+			})
+		}
+	}
+	return "", last
+}
+
+// downloadAttempt 发一次下载请求。part 已有数据时带 Range 续传；服务端必须回 206 且 Content-Range
+// 与请求一致，否则截断从头下载。返回整个文件的 SHA-256。
+func (s *Service) downloadAttempt(ctx context.Context, c *http.Client, src, host, target string, info *ReleaseInfo, part string, attempt int) (string, error) {
+	var offset int64
+	if st, err := os.Stat(part); err == nil {
+		offset = st.Size()
+		if info.AssetSize > 0 && offset > info.AssetSize {
+			offset = 0
+		}
+	}
+	if info.AssetSize > 0 && offset == info.AssetSize {
+		// 上次已下载完整（例如校验前被中断）：直接算哈希，不再请求。
+		h := sha256.New()
+		if err := hashPrefix(part, offset, h); err == nil {
+			return hex.EncodeToString(h.Sum(nil)), nil
+		}
+		offset = 0
+	}
+
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", httpx.UserAgent())
+	if offset > 0 {
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
+	}
+	resp, err := httpx.DoWith(c, req)
+	if err != nil {
+		ne := newNetError(opDownload, src, target, err)
+		ne.preResponse = true
+		return "", ne
+	}
+	defer resp.Body.Close()
+
+	total := info.AssetSize
+	resumed := false
+	switch {
+	case offset > 0 && resp.StatusCode == http.StatusPartialContent:
+		start, size, ok := parseContentRange(resp.Header.Get("Content-Range"))
+		if !ok || start != offset || (info.AssetSize > 0 && size != info.AssetSize) {
+			// 区间对不上：不信任，从头下载（下一次尝试）。
+			_ = os.Remove(part)
+			return "", &NetError{Kind: "network", Op: opDownload, Source: src, Host: host,
+				Message: fmt.Sprintf("download via %s: server returned an unexpected range %q; restarting from the beginning", sourceLabel(src), resp.Header.Get("Content-Range"))}
+		}
+		resumed = true
+		if total <= 0 {
+			total = size
+		}
+	case resp.StatusCode == http.StatusOK:
+		offset = 0 // 服务端忽略了 Range，整个文件重来
+		if total <= 0 {
+			total = resp.ContentLength
+		}
+	case offset > 0 && resp.StatusCode == http.StatusRequestedRangeNotSatisfiable:
+		_ = os.Remove(part)
+		return "", &NetError{Kind: "network", Op: opDownload, Source: src, Host: host,
+			Message: fmt.Sprintf("download via %s: cannot resume (HTTP 416); restarting from the beginning", sourceLabel(src))}
+	default:
+		return "", httpStatusError(opDownload, src, target, resp)
+	}
+
+	flag := os.O_CREATE | os.O_WRONLY | os.O_TRUNC
+	if resumed {
+		flag = os.O_WRONLY | os.O_APPEND
+	}
+	f, err := os.OpenFile(part, flag, 0o755)
+	if err != nil {
+		return "", err
+	}
+	h := sha256.New()
+	if resumed {
+		if err := hashPrefix(part, offset, h); err != nil {
+			_ = f.Close()
+			_ = os.Remove(part)
+			return "", err
+		}
+	}
+
+	pw := &progressWriter{
+		s: s, version: info.Version, total: total, received: offset, start: time.Now(), base: offset,
+		source: src, host: host, attempt: attempt, resumed: resumed,
+	}
+	s.emitProgress(pw.snapshot())
+	// 停滞检测：每收到数据就重置计时器，stallTimeout 内没有数据则取消本次请求。
+	stall := time.AfterFunc(stallTimeout, func() { cancel(errStalled) })
+	defer stall.Stop()
+	body := &stallReader{r: resp.Body, timer: stall}
+	_, copyErr := io.Copy(io.MultiWriter(f, h, pw), body)
+	closeErr := f.Close()
+	if copyErr != nil {
+		if cause := context.Cause(ctx); errors.Is(cause, errStalled) {
+			copyErr = fmt.Errorf("%w (%s without data)", errStalled, stallTimeout)
+		}
+		return "", newNetError(opDownload, src, target, copyErr)
+	}
+	if closeErr != nil {
+		return "", closeErr
+	}
+	if total > 0 && pw.received != total {
+		return "", &NetError{Kind: "reset", Op: opDownload, Source: src, Host: host,
+			Message: fmt.Sprintf("download via %s ended early: %d of %d bytes", sourceLabel(src), pw.received, total)}
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// parseContentRange 解析 "bytes <start>-<end>/<size>"。
+func parseContentRange(v string) (start, size int64, ok bool) {
+	rest, found := strings.CutPrefix(strings.TrimSpace(v), "bytes ")
+	if !found {
+		return 0, 0, false
+	}
+	rng, total, found := strings.Cut(rest, "/")
+	if !found {
+		return 0, 0, false
+	}
+	a, b, found := strings.Cut(rng, "-")
+	if !found {
+		return 0, 0, false
+	}
+	start, err1 := strconv.ParseInt(a, 10, 64)
+	end, err2 := strconv.ParseInt(b, 10, 64)
+	size, err3 := strconv.ParseInt(total, 10, 64)
+	if err1 != nil || err2 != nil || err3 != nil || start < 0 || end < start || end >= size {
+		return 0, 0, false
+	}
+	return start, size, true
+}
+
+// hashPrefix 把 part 的前 n 字节喂给 h（续传时补齐整文件哈希）。
+func hashPrefix(path string, n int64, h hash.Hash) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err := io.CopyN(h, f, n); err != nil {
+		return fmt.Errorf("read partial download: %w", err)
+	}
+	return nil
+}
+
+type stallReader struct {
+	r     io.Reader
+	timer *time.Timer
+}
+
+func (s *stallReader) Read(p []byte) (int, error) {
+	n, err := s.r.Read(p)
+	if n > 0 {
+		s.timer.Reset(stallTimeout)
+	}
+	return n, err
 }
 
 // pruneVersions 只保留最近 keepVersions 个版本目录（当前版本总是保留；正在运行的文件删不掉时跳过）。
@@ -559,8 +795,24 @@ type progressWriter struct {
 	version  string
 	total    int64
 	received int64
+	base     int64 // 本次尝试开始时已有的字节（续传），速度只按本次新收到的算
 	start    time.Time
 	lastEmit time.Time
+	source   string
+	host     string
+	attempt  int
+	resumed  bool
+}
+
+func (p *progressWriter) snapshot() DownloadProgress {
+	var bps int64
+	if el := time.Since(p.start).Seconds(); el > 0 {
+		bps = int64(float64(p.received-p.base) / el)
+	}
+	return DownloadProgress{
+		Version: p.version, Received: p.received, Total: p.total, Phase: "downloading", BytesPerSec: bps,
+		Source: p.source, Host: p.host, Attempt: p.attempt, Resumed: p.resumed,
+	}
 }
 
 func (p *progressWriter) Write(b []byte) (int, error) {
@@ -568,13 +820,7 @@ func (p *progressWriter) Write(b []byte) (int, error) {
 	now := time.Now()
 	if now.Sub(p.lastEmit) >= 200*time.Millisecond {
 		p.lastEmit = now
-		var bps int64
-		if el := now.Sub(p.start).Seconds(); el > 0 {
-			bps = int64(float64(p.received) / el)
-		}
-		p.s.emitProgress(DownloadProgress{
-			Version: p.version, Received: p.received, Total: p.total, Phase: "downloading", BytesPerSec: bps,
-		})
+		p.s.emitProgress(p.snapshot())
 	}
 	return len(b), nil
 }

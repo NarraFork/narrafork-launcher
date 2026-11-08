@@ -25,5 +25,11 @@ export const consolePageEnUS: Messages = {
     clear: 'Clear output',
     jumpToEnd: 'Jump to latest',
     empty: 'Output appears here once NarraFork is running…',
+    terminalScheme: {
+      label: 'Terminal colors',
+      auto: 'Auto',
+      light: 'Light',
+      dark: 'Dark',
+    },
   },
 };
